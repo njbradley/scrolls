@@ -16,6 +16,7 @@ using std::vector;
 using glm::vec3;
 using glm::ivec3;
 using glm::vec2;
+using glm::ivec2;
 
 using uint8 = uint8_t;
 using uint16 = uint16_t;
@@ -46,7 +47,7 @@ class Renderer;
 #define ERR(MSG) std::cerr << "ERR: '" << MSG << "'" << endl \
 	<< "at " << __PRETTY_FUNCTION__ << ": " << __LINE__ << " " __FILE__ << endl; \
 	std::terminate();
-#define ASSERT(X) if (!(X)) ERR("ASSERT(" #X ") failed");
+#define ASSERT(X) if (!(X)) {ERR("ASSERT(" #X ") failed");}
 
 struct Direction {
 	static constexpr ivec3 dir_array[] = {
@@ -65,5 +66,18 @@ struct Direction {
 	operator ivec3() { return dir_array[index]; }
 	operator int() { return index; }
 };
+
+bool getKey(char let);
+double getTime();
+
+inline ostream& operator<<(ostream& out, ivec3 pos) {
+	out << pos.x << ',' << pos.y << ',' << pos.z;
+	return out;
+}
+
+inline ostream& operator<<(ostream& out, vec3 pos) {
+	out << pos.x << ',' << pos.y << ',' << pos.z;
+	return out;
+}
 
 #endif

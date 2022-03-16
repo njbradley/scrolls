@@ -9,14 +9,14 @@ class Renderer {
 public:
 	virtual ~Renderer() {}
 	
-	virtual bool render(BlockView block, RenderBuf* renderbuf) = 0;
+	virtual bool render(NodeView block, RenderBuf* renderbuf) = 0;
 };
 
 
 class DefaultRenderer : public Renderer {
 	PLUGIN(DefaultRenderer);
 public:
-	virtual bool render(BlockView block, RenderBuf* renderbuf);
+	virtual bool render(NodeView block, RenderBuf* renderbuf);
 };
 
 #endif

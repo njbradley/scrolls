@@ -5,6 +5,7 @@
 #include "plugins.h"
 
 #include "blocks.h"
+#include "player.h"
 
 class Game {
 	BASE_PLUGIN(Game, ());
@@ -31,6 +32,8 @@ protected:
 	Renderer* renderer;
 	
 	BlockContainer world;
+	Spectator spectator;
+	Controls* controls;
 };
 
 #endif

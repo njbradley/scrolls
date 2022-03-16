@@ -21,9 +21,9 @@ bool NodeView::step_down(NodeIndex pos) {
 
 bool NodeView::step_up() {
 	if (node->parent != nullptr) {
-		node = node->parent;
 		globalpos -= ivec3(parentindex()) * scale;
 		scale *= BDIMS;
+		node = node->parent;
 		return true;
 	}
 	return false;
@@ -73,13 +73,57 @@ void NodeView::join() {
 	delete[] node->children;
 	node->flags &= ~Block::CONTINUES_FLAG;
 	node->block = nullptr;
+	on_change();
 }
 
 void NodeView::split() {
 	if (node->block != nullptr) delete node->block;
 	node->children = new Node[BDIMS3];
+	for (int i = 0; i < BDIMS3; i ++) {
+		node->children[i].parent = node;
+	}
+	node->flags |= Block::CONTINUES_FLAG;
+	on_change();
 }
 
+bool NodeView::has_flag(uint32 flag) {
+	return node->flags & flag;
+}
+
+void NodeView::set_flag(uint32 flag) {
+	node->flags |= flag;
+	flag &= Block::PROPOGATING_FLAGS;
+	if (flag == 0) return;
+	
+	Node* curnode = node->parent;
+	while (curnode != nullptr) {
+		curnode->flags |= flag;
+		curnode = curnode->parent;
+	}
+}
+
+void NodeView::reset_flag(uint32 flag) {
+	node->flags &= ~flag;
+}
+
+void NodeView::set_block(Block* block) {
+	ASSERT(!continues());
+	if (node->block != nullptr) delete node->block;
+	node->block = block;
+	on_change();
+}
+
+Block* NodeView::swap_block(Block* block) {
+	ASSERT(!continues());
+	Block* old = node->block;
+	node->block = block;
+	return old;
+	on_change();
+}
+
+void NodeView::on_change() {
+	set_flag(Block::RENDER_FLAG);
+}
 
 BlockView::BlockView() {
 	
@@ -110,6 +154,7 @@ NodeIter::NodeIter(const NodeView& view): NodeView(view), max_scale(view.scale) 
 
 
 void NodeIter::step_down() {
+	// cout << "step down " << globalpos << ' ' << scale << endl;
 	if (continues()) {
 		NodeView::step_down(startpos());
 		get_safe();
@@ -119,9 +164,11 @@ void NodeIter::step_down() {
 }
 
 void NodeIter::step_side() {
+	// cout << "step side " << globalpos << ' ' << scale << endl;
 	if (node->parent == nullptr or scale >= max_scale) {
 		finish();
 	} else if (parentindex() == endpos()) {
+		step_up();
 		step_side();
 	} else {
 		NodeView::step_side(increment_func(parentindex()));
@@ -130,6 +177,7 @@ void NodeIter::step_side() {
 }
 
 void NodeIter::get_safe() {
+	// cout << "get safe " << globalpos << ' ' << scale << endl;
 	if (!valid_tree()) {
 		step_side();
 	} else if (!valid_node()) {

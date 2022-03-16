@@ -34,4 +34,8 @@ void PluginLoader::choose_plugins() {
 	}
 }
 
+string PluginLoader::find_path(string search_path) {
+	return "resources/" + search_path;
+}
+
 PluginLoader pluginloader;

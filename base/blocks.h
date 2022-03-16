@@ -27,6 +27,8 @@ struct Node {
 		Block* block;
 	};
 	uint32 flags = 0;
+	
+	Node();
 };
 
 // struct that represents an index into
@@ -78,6 +80,15 @@ public:
 	void join();
 	void split();
 	
+	bool has_flag(uint32 flag);
+	void set_flag(uint32 flag);
+	void reset_flag(uint32 flag);
+	
+	void on_change();
+	
+	void set_block(Block* block);
+	Block* swap_block(Block* block);
+	
 	bool operator==(const NodeView& other) const;
 	bool operator!=(const NodeView& other) const;
 protected:
@@ -88,14 +99,6 @@ class BlockView : public NodeView {
 public:
 	BlockView();
 	BlockView(const NodeView& node);
-	
-	// using NodeView::globalpos;
-	// using NodeView::scale;
-	//
-	// using NodeView::isvalid;
-	// using NodeView::isnull;
-	// using NodeView::parentindex;
-	// using NodeView::get_global;
 	
 	Block* operator->();
 	NodeView nodeview() const;
@@ -116,10 +119,6 @@ public:
 	NodeIter operator++();
 	NodeView& operator*();
 	
-	// using NodeView::invalidate;
-	// using NodeView::operator==;
-	// using NodeView::operator!=;
-protected:
 	int max_scale = -1;
 		
 	// the start and end point for iterating inside a single block
@@ -174,6 +173,9 @@ private:
 
 // INLINE FUNCTIONS
 
+inline Node::Node() {
+	block = nullptr;
+}
 
 inline NodeIndex::NodeIndex(int ind): index(ind) {
 	ASSERT(ind >= 0 and ind < BDIMS3);
@@ -269,12 +271,12 @@ inline NodeIndex NodeIter::increment_func(NodeIndex pos) {
 
 // is the current node and all of its children valid
 inline bool NodeIter::valid_tree() const {
-	return false;
+	return true;
 }
 
 // is only the the current node valid
 inline bool NodeIter::valid_node() const {
-	return false;
+	return true;
 }
 
 inline void NodeIter::finish() {

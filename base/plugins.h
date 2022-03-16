@@ -115,6 +115,15 @@ struct ExportPluginSingleton {
 	}
 };
 
+template <typename NewType>
+struct RequirePlugin {
+	void** plugptr;
+	RequirePlugin(void** ptr): plugptr(ptr) { }
+	NewType* operator->() {
+		return (NewType*) *plugptr;
+	}
+};
+
 #define CONCAT_INNER(a, b) a ## b
 #define CONCAT(a, b) CONCAT_INNER(a, b)
 
@@ -219,6 +228,12 @@ The parameters are:
 	typedef X Plugin_Type; \
 	virtual PluginDef<Plugin_BaseType>* get_plugindef() const { return plugindef(); }
 
+
+
+#define REQUIRE_PLUGIN(oldname, newname, NewType) \
+	RequirePlugin<NewType> newname = RequirePlugin<NewType>(&oldname);
+
+
 template <typename T>
 void plugdelete(T* ptr) {
 	ptr->get_plugindef()->delfunc(ptr);
@@ -229,6 +244,8 @@ public:
 	PluginLoader();
 	void load();
 	void choose_plugins();
+	
+	string find_path(string search_path);
 };
 
 extern PluginLoader pluginloader;

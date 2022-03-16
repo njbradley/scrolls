@@ -9,7 +9,7 @@ class BlockIterable {
 public:
 	Iterator iter;
 	template <typename ... Args>
-	BlockIterable(Args&& ... args): iter(std::forward<Args>(args)...) { }
+	BlockIterable(Args&& ... args): iter(std::forward<Args>(args)...) { iter.get_safe(); }
 	
 	Iterator begin() { return iter; }
 	Iterator end() { Iterator enditer = iter; enditer.invalidate(); return enditer; }

@@ -3,15 +3,14 @@
 
 int main() {
 	pluginloader.load();
-	// Game* game = Game::plugnew();
-	Plugin<Game> game;
+	Game* game = Game::plugnew();
 	
 	game->setup_gameloop();
 	while (game->playing) {
 		game->timestep();
 	}
 	
-	// plugdelete(game);
+	plugdelete(game);
 	
 	return 0;
 }

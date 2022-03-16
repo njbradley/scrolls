@@ -10,12 +10,14 @@ OPT := -g -DSCROLLS_DEBUG
 endif
 
 
-SOURCES := $(wildcard */*.cc)
-HEADERS := $(wildcard */*.h)
-OBJECTS := $(patsubst %,obj/%, $(patsubst %.cc,%.o, $(SOURCES)))
+sources := $(wildcard */*.cc)
+headers := $(wildcard */*.h)
+allobjects := $(patsubst %,obj/%, $(patsubst %.cc,%.o, $(sources)))
 
-scrolls: $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(OPT) $(OBJECTS) -o scrolls $(LDFLAGS) $(LIBS)
+objects = $(foreach dir,$(1),$(patsubst %.cc,obj/%.o,$(wildcard $(dir)/*.cc)))
 
-$(OBJECTS): obj/%.o : %.cc $(HEADERS)
+scrolls: $(call objects,base glgraphics)
+	$(CXX) $(CXXFLAGS) $(OPT) $^ -o scrolls $(LDFLAGS) $(LIBS)
+
+$(allobjects): obj/%.o : %.cc $(headers)
 	$(CXX) $(CXXFLAGS) $(OPT) -c $< -o $@

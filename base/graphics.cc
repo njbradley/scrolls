@@ -4,8 +4,12 @@ DEFINE_PLUGIN(RenderBuf);
 
 DEFINE_PLUGIN(GraphicsContext);
 
+RenderData::RenderData() {
+	posdata.scale = -1;
+}
+
 GraphicsContext::GraphicsContext() {
-	blockbuf = RenderBuf::plugnew(this);
+	blockbuf = RenderBuf::plugnew();
 	camera_pos = nullptr;
 }
 
@@ -13,7 +17,7 @@ GraphicsContext::~GraphicsContext() {
 	plugdelete(blockbuf);
 }
 
-void GraphicsContext::set_camera(vec3* newpos, vec2* newdir) {
+void GraphicsContext::set_camera(vec3* newpos, vec2* newrot) {
 	camera_pos = newpos;
-	camera_dir = newdir;
+	camera_rot = newrot;
 }
