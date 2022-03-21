@@ -7,7 +7,12 @@ flat in uint tex;
 out vec4 color;
 
 // Values that stay constant for the whole mesh.
+uniform sampler2DArray textures;
 
 void main() {
-	color = vec4(UV.x, UV.y, tex, 1);
+	vec4 tex_color = texture(textures, vec3(UV.x, UV.y, tex-1u));
+	if (tex_color.a < 0.1) {
+		discard;
+	}
+	color = tex_color;
 }

@@ -27,6 +27,7 @@ public:
 	~GLGraphics();
 	
 	void init_graphics();
+	void load_textures();
 	void block_draw_call();
 	virtual void swap();
 protected:
@@ -35,10 +36,13 @@ protected:
 	GLuint block_program;
 	GLuint pMatID;
 	GLuint mvMatID;
+	GLuint blockTexID;
 	
 	GLuint vertexarray;
 	GLuint posbuffer;
 	GLuint databuffer;
+	
+	GLuint block_textures;
 };
 
 

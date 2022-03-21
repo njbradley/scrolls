@@ -13,9 +13,9 @@ struct RenderPosData {
 
 struct RenderFaceData {
 	struct {
-		uint16 texture = 0;
-		uint16 other = 0;
-		uint stuff = 0;
+		uint16 texture;
+		uint16 other;
+		uint stuff;
 	} faces[6];
 };
 

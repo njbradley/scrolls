@@ -23,6 +23,7 @@ uniform mat4 Pmat;
 // uniform vec3 sunlight;
 
 float voxSize = 1;
+const float texSize = 0.5;
 
 bool blending_light = false;
 vec2 light;
@@ -54,20 +55,12 @@ bool is_quad_visible(vec4 position, vec4 normal) {
 }
 
 void addQuad(vec4 position, vec4 dy, vec4 dx, vec4 normal, uvec2 data) {
-	if (false && !is_quad_visible(position, normal)) {
-		UV = vec2(0,0);
-		tex = 1u;
-		gl_Position = vec4(0,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(1,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(1,1,0,1);
-		EmitVertex();
+	if (!is_quad_visible(position, normal)) {
 		return;
 	}
 	gen_attr(data, normal);
 	
-  UV = vec2(1,0);
+  UV = vec2(voxSize/texSize,0);
 	set_attr();
   gl_Position = Pmat * (position + dx - dy);
   EmitVertex();
@@ -77,12 +70,12 @@ void addQuad(vec4 position, vec4 dy, vec4 dx, vec4 normal, uvec2 data) {
 	gl_Position = Pmat * (position - dx - dy);
   EmitVertex();
 
-	UV = vec2(1,1);
+	UV = vec2(voxSize/texSize,voxSize/texSize);
 	set_attr();
 	gl_Position = Pmat * (position + dx + dy);
   EmitVertex();
 
-	UV = vec2(0,1);
+	UV = vec2(0,voxSize/texSize);
 	set_attr();
   gl_Position = Pmat * (position - dx + dy);
   EmitVertex();
@@ -95,30 +88,7 @@ vec4 rotatePos(vec4 v, vec4 q) {
 }
 
 void main() {
-	
-	// if (scale[0] < 3) {
-	// 	UV = vec2(0,0);
-	// 	tex = 1u;
-	// 	gl_Position = vec4(0,0,0,1);
-	// 	EmitVertex();
-	// 	gl_Position = vec4(1,0,0,1);
-	// 	EmitVertex();
-	// 	gl_Position = vec4(1,1,0,1);
-	// 	EmitVertex();
-	// }
-	// return;
-	
-	if (false) { //isnan(scale[0])) {
-		
-		UV = vec2(0,0);
-		tex = 0u;
-		gl_Position = vec4(0,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(1,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(1,1,0,1);
-		EmitVertex();
-		
+	if (isnan(scale[0])) {
 		return;
 	}
 	
@@ -130,24 +100,9 @@ void main() {
 	
 	vec4 screencenter = Pmat * center;
 	float divisor = screencenter.w + voxSize;
-	if (false) {//center.z > 1.8*voxSize || abs(max(screencenter.x/divisor, screencenter.y/divisor)) > 1 + 1.8*voxSize/divisor) {
-		
-		UV = vec2(0,0);
-		tex = 1u;
-		gl_Position = vec4(0,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(-1,0,0,1);
-		EmitVertex();
-		gl_Position = vec4(-1,1,0,1);
-		EmitVertex();
-		
+	if (center.z > 1.8*voxSize || abs(max(screencenter.x/divisor, screencenter.y/divisor)) > 1 + 1.8*voxSize/divisor) {
 		return;
 	}
-	
-	
-  // vec4 dx = vec4(1,0,0,0);
-  // vec4 dy = vec4(0,1,0,0);
-  // vec4 dz = vec4(0,0,1,0);
 	
   vec4 dx = (MVmat[0] * voxSize);
   vec4 dy = (MVmat[1] * voxSize);

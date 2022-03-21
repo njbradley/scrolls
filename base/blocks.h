@@ -18,6 +18,9 @@ struct Block {
 		RENDER_FLAG = 0x00000001,
 		CONTINUES_FLAG = 0x00010000
 	};
+	
+	Block();
+	Block(int value);
 };
 
 struct Node {
@@ -88,6 +91,9 @@ public:
 	
 	void set_block(Block* block);
 	Block* swap_block(Block* block);
+	
+	void from_file(istream& ifile);
+	void to_file(ostream& ofile);
 	
 	bool operator==(const NodeView& other) const;
 	bool operator!=(const NodeView& other) const;

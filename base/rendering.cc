@@ -20,30 +20,43 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 			RenderData data;
 			bool visible = false;
 			
-			data.posdata.pos = block.globalpos;
+			// cout << "BEGIN BLOCK " << block.globalpos << ' ' << block.scale << endl;
+			
+			data.posdata.pos = vec3(block.globalpos) + float(block.scale) / 2;
 			data.posdata.scale = block.scale;
 			
 			for (Direction dir : Direction::all) {
 				data.facedata.faces[dir].texture = 0;
+				data.facedata.faces[dir].other = 0;
+				data.facedata.faces[dir].stuff = 0;
 				NodeView sidenode = block.get_global(block.globalpos + ivec3(dir) * block.scale, block.scale);
-				for (BlockView sideblock : BlockIterable<DirBlockIter>(sidenode, -ivec3(dir))) {
-					if (sideblock->value == 0) {
-						data.facedata.faces[dir].texture = 1;
-						visible = true;
+				// cout << "  going to " << block.globalpos + ivec3(dir) * block.scale << endl;
+				// cout << "  SIDENODE " << sidenode.globalpos << ' ' << sidenode.scale << endl;
+				if (sidenode.isvalid()) {
+					for (BlockView sideblock : BlockIterable<DirBlockIter>(sidenode, -ivec3(dir))) {
+						// cout << "    SIDEBLOCK " << sideblock.globalpos << ' ' << sideblock.scale << endl;
+						if (sideblock->value == 0) {
+							data.facedata.faces[dir].texture = block->value;
+							visible = true;
+						}
 					}
 				}
+				// else {
+				// 	data.facedata.faces[dir].texture = block->value;
+				// 	visible = true;
+				// }
+					
 			}
 			
 			// for (Direction dir : Direction::all) {
-				// data.facedata.faces[dir].texture = visible;
-			// }
+			// 	cout << data.facearr[int(dir)*2] << ' ';
+			// } cout << endl;
 			
 			visible = true;
 			if (visible) {
 				if (block->renderindex != -1) {
 					renderbuf->edit(block->renderindex, data);
 				} else {
-					cout << "adding block " << endl;
 					block->renderindex = renderbuf->add(data);
 				}
 			} else if (block->renderindex != -1) {

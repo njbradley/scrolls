@@ -1,4 +1,13 @@
 #include "blocks.h"
+#include "blockiter.h"
+
+Block::Block() {
+	
+}
+
+Block::Block(int nvalue): value(nvalue) {
+	
+}
 
 
 NodeView::NodeView(): scale(-1) {
@@ -46,13 +55,13 @@ NodeView NodeView::get_global(ivec3 pos, int scale) {
 	return NodeView();
 }
 
-bool NodeView::moveto(ivec3 pos, int scale) {
+bool NodeView::moveto(ivec3 pos, int goalscale) {
 	ivec3 diff3 = pos - globalpos;
   int diffmax = std::max(std::max(diff3.x, diff3.y), diff3.z);
   int diffmin = std::min(std::min(diff3.x, diff3.y), diff3.z);
-  while (diffmax >= scale or diffmin < 0 or scale < scale) {
+  while (diffmax >= scale or diffmin < 0 or scale < goalscale) {
     if (!step_up()) {
-			return false;
+			return !(diffmax >= scale or diffmin < 0);
 		}
     
     diff3 = pos - globalpos;
@@ -60,10 +69,10 @@ bool NodeView::moveto(ivec3 pos, int scale) {
     diffmin = std::min(std::min(diff3.x, diff3.y), diff3.z);
   }
   
-  while (scale > scale) {
+  while (scale > goalscale) {
     ivec3 rem = (pos - globalpos) / (scale / BDIMS);
     if (!step_down(rem)) {
-			return false;
+			return true;
 		}
   }
 	return true;
@@ -119,6 +128,32 @@ Block* NodeView::swap_block(Block* block) {
 	node->block = block;
 	return old;
 	on_change();
+}
+
+void NodeView::from_file(istream& ifile) {
+	for (NodeView curnode : BlockIterable<BlockIter>(*this)) {
+		if (ifile.peek() == '{') {
+			ifile.get();
+			curnode.split();
+		} else if (ifile.peek() == '~') {
+			ifile.get();
+			curnode.set_block(nullptr);
+		} else {
+			curnode.set_block(new Block(ifile.get()));
+		}
+	}
+}
+
+void NodeView::to_file(ostream& ofile) {
+	for (NodeView curnode : BlockIterable<BlockIter>(*this)) {
+		if (curnode.continues()) {
+			ofile.put('{');
+		} else if (isnull()) {
+			ofile.put('~');
+		} else {
+			ofile.put(curnode.node->block->value);
+		}
+	}
 }
 
 void NodeView::on_change() {

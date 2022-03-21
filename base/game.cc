@@ -3,13 +3,14 @@
 #include "rendering.h"
 #include "blocks.h"
 #include "blockiter.h"
+#include "terrain.h"
 
 DEFINE_PLUGIN(Game);
 
 
 EXPORT_PLUGIN(SingleGame);
 
-SingleGame::SingleGame(): world(ivec3(0,0,0), 4) {
+SingleGame::SingleGame(): world(ivec3(0,0,0), 128) {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
@@ -24,20 +25,23 @@ SingleGame::~SingleGame() {
 void SingleGame::setup_gameloop() {
 	
 	cout << "START " << endl;
-	for (NodeView node : BlockIterable<NodeIter>(world.rootview())) {
-		// cout << node.globalpos << ' ' << node.scale << endl;
-		ASSERT(node.globalpos.x < 4);
-		if (node.continues()) continue;
-		if (node.scale > 1) {
-			node.split();
-			// cout << "split to " << node.scale << endl;
-		} else {
-			Block* block = new Block();
-			block->value = rand()%2;
-			node.set_block(block);
-			// cout << "ended at " << node.scale << endl;
-		}
-	}
+	// for (NodeView node : BlockIterable<NodeIter>(world.rootview())) {
+	// 	if (node.continues()) continue;
+	// 	ivec3 pos = node.globalpos + node.scale/2;
+	// 	if (std::abs(pos.x/2 - pos.y) < node.scale/2) {
+	// 		node.split();
+	// 	} else {
+	// 		Block* block = new Block();
+	// 		block->value = pos.x/2 > pos.y;
+	// 		node.set_block(block);
+	// 		// cout << "ended at " << node.scale << endl;
+	// 	}
+	// }
+	
+	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
+	gen->generate_chunk(world.rootview());
+	cout << gen->get_height(ivec3(0,0,0)) << endl;
+	
 	cout << "END " << endl;
 	
 	renderer->render(world.rootview(), graphics->blockbuf);

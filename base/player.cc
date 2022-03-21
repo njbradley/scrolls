@@ -28,7 +28,7 @@ void Spectator::timestep(float curtime, float deltatime) {
 	// Reset mouse position for next frame
 	controller->mouse_pos(screen_dims/2);
 	
-	float nspeed = 1;
+	float nspeed = 8;
 	
 	glm::vec3 right = glm::vec3(
 		sin(angle.x - 3.14f/2.0f),

@@ -1,7 +1,9 @@
 #include "graphics.h"
 #include <cstdio>
+#include <filesystem>
 
 #include "shader.h"
+#include "textures.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -53,6 +55,7 @@ EXPORT_PLUGIN(GLGraphics);
 
 GLGraphics::GLGraphics() {
 	init_graphics();
+  load_textures();
 }
 
 GLGraphics::~GLGraphics() {
@@ -129,7 +132,8 @@ void GLGraphics::init_graphics() {
 	);
 	
 	pMatID = glGetUniformLocation(block_program, "Pmat");
-	mvMatID = glGetUniformLocation(block_program, "MVmat");
+  mvMatID = glGetUniformLocation(block_program, "MVmat");
+	blockTexID = glGetUniformLocation(block_program, "textures");
 	
 	glBindVertexArray(vertexarray);
 	GLuint blockbuffs[2];
@@ -137,11 +141,20 @@ void GLGraphics::init_graphics() {
 	posbuffer = blockbuffs[0];
 	databuffer = blockbuffs[1];
 	
-	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 10000);
+	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 100000);
 	
 	glfwSwapInterval(1);
 }
 
+void GLGraphics::load_textures() {
+  
+  vector<string> paths;
+  for (std::filesystem::path path : std::filesystem::directory_iterator(pluginloader.find_path("textures/blocks/"))) {
+    paths.push_back(path.string());
+  }
+  
+  block_textures = load_array(paths, 8);
+}
 
 void GLGraphics::block_draw_call() {
 	if (camera_rot == nullptr or camera_pos == nullptr) return;
@@ -202,9 +215,9 @@ void GLGraphics::block_draw_call() {
 		glVertexAttribIPointer(2+i, 2, GL_UNSIGNED_INT, sizeof(RenderFaceData), (void*) (offsetof(RenderFaceData, faces) + i * sizeof(RenderFaceData)/6));
 	}
 	
-	// glActiveTexture(GL_TEXTURE0);
-	// glBindTexture(GL_TEXTURE_2D_ARRAY, blocktex_id);
-	// glUniform1i(blockTextureID, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, block_textures);
+	glUniform1i(blockTexID, 0);
 	
 	glDrawArrays(GL_POINTS, 0, ((GLRenderBuf*)blockbuf)->num_points);
 	

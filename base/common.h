@@ -41,6 +41,7 @@ class BlockContainer;
 class GraphicsContext;
 class RenderBuf;
 class Renderer;
+class TerrainGenerator;
 
 
 
@@ -78,6 +79,18 @@ inline ostream& operator<<(ostream& out, ivec3 pos) {
 inline ostream& operator<<(ostream& out, vec3 pos) {
 	out << pos.x << ',' << pos.y << ',' << pos.z;
 	return out;
+}
+
+inline int safefloor(float val) {
+	return int(val) - (val < 0 and val != int(val));
+}
+
+inline ivec3 safefloor(vec3 pos) {
+	return ivec3(safefloor(pos.x), safefloor(pos.y), safefloor(pos.z));
+}
+
+inline ivec2 safefloor(vec2 pos) {
+	return ivec2(safefloor(pos.x), safefloor(pos.y));
 }
 
 #endif
