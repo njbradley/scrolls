@@ -11,7 +11,8 @@
 struct Block {
 	int value = 0;
 	int renderindex = -1;
-	uint8 lightval = 0;
+	uint8 sunlight = 0;
+	uint8 blocklight = 0;
 	
 	enum : uint32 {
 		PROPOGATING_FLAGS = 0x0000ffff,
@@ -37,17 +38,17 @@ struct Node {
 // struct that represents an index into
 // a inner node
 struct NodeIndex {
-	int index;
+	const int index;
 	
-	NodeIndex(int index);
-	NodeIndex(ivec3 pos);
+	constexpr NodeIndex(int index);
+	constexpr NodeIndex(ivec3 pos);
 	
-	operator ivec3() const;
-	operator int() const;
+	constexpr operator ivec3() const;
+	constexpr operator int() const;
 	
-	int x() const;
-	int y() const;
-	int z() const;
+	constexpr int x() const;
+	constexpr int y() const;
+	constexpr int z() const;
 };
 	
 
@@ -77,13 +78,14 @@ public:
 	bool step_up();
 	bool step_side(NodeIndex pos);
 	
+	NodeView child(NodeIndex index);
 	NodeView get_global(ivec3 pos, int scale);
 	bool moveto(ivec3 pos, int scale);
 	
 	void join();
 	void split();
 	
-	bool has_flag(uint32 flag);
+	bool has_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
 	
@@ -97,7 +99,7 @@ public:
 	
 	bool operator==(const NodeView& other) const;
 	bool operator!=(const NodeView& other) const;
-protected:
+// protected:
 	Node* node = nullptr;
 };
 
@@ -183,31 +185,31 @@ inline Node::Node() {
 	block = nullptr;
 }
 
-inline NodeIndex::NodeIndex(int ind): index(ind) {
+inline constexpr NodeIndex::NodeIndex(int ind): index(ind) {
 	ASSERT(ind >= 0 and ind < BDIMS3);
 }
 
-inline NodeIndex::NodeIndex(ivec3 pos): index(pos.x*BDIMS*BDIMS + pos.y*BDIMS + pos.z) {
+inline constexpr NodeIndex::NodeIndex(ivec3 pos): index(pos.x*BDIMS*BDIMS + pos.y*BDIMS + pos.z) {
 	ASSERT(pos.x < BDIMS and pos.x >= 0 and pos.y < BDIMS and pos.y >= 0 and pos.z < BDIMS and pos.z >= 0);
 }
 
-inline NodeIndex::operator int() const {
+inline constexpr NodeIndex::operator int() const {
 	return index;
 }
 
-inline NodeIndex::operator ivec3() const {
+inline constexpr NodeIndex::operator ivec3() const {
 	return ivec3(index/(BDIMS*BDIMS), index/BDIMS%BDIMS, index%BDIMS);
 }
 
-inline int NodeIndex::x() const {
+inline constexpr int NodeIndex::x() const {
 	return index/(BDIMS*BDIMS);
 }
 
-inline int NodeIndex::y() const {
+inline constexpr int NodeIndex::y() const {
 	return index/BDIMS%BDIMS;
 }
 
-inline int NodeIndex::z() const {
+inline constexpr int NodeIndex::z() const {
 	return index%BDIMS;
 }
 

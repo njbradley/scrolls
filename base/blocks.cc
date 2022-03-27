@@ -19,7 +19,7 @@ NodeView::NodeView(Node* nnode, ivec3 gpos, int nscale): node(nnode), globalpos(
 }
 
 bool NodeView::step_down(NodeIndex pos) {
-	if (node != nullptr and continues()) {
+	if (continues()) {
 		node = node->children + pos;
 		scale /= BDIMS;
 		globalpos += scale * ivec3(pos);
@@ -47,9 +47,17 @@ bool NodeView::step_side(NodeIndex pos) {
 	return false;
 }
 
-NodeView NodeView::get_global(ivec3 pos, int scale) {
+NodeView NodeView::child(NodeIndex index) {
 	NodeView result = *this;
-	if (result.moveto(pos, scale)) {
+	if (result.step_down(index)) {
+		return result;
+	}
+	return NodeView();
+}
+
+NodeView NodeView::get_global(ivec3 pos, int goalscale) {
+	NodeView result = *this;
+	if (result.moveto(pos, goalscale)) {
 		return result;
 	}
 	return NodeView();
@@ -95,7 +103,7 @@ void NodeView::split() {
 	on_change();
 }
 
-bool NodeView::has_flag(uint32 flag) {
+bool NodeView::has_flag(uint32 flag) const {
 	return node->flags & flag;
 }
 
@@ -214,8 +222,10 @@ void NodeIter::step_side() {
 void NodeIter::get_safe() {
 	// cout << "get safe " << globalpos << ' ' << scale << endl;
 	if (!valid_tree()) {
+		// cout << "invalid tree" << endl;
 		step_side();
 	} else if (!valid_node()) {
+		// cout << "invalid node" << endl;
 		step_down();
 	}
 }

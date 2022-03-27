@@ -14,8 +14,10 @@ struct RenderPosData {
 struct RenderFaceData {
 	struct {
 		uint16 texture;
+		uint16 stuff;
+		uint8 sunlight;
+		uint8 blocklight;
 		uint16 other;
-		uint stuff;
 	} faces[6];
 };
 
@@ -42,6 +44,15 @@ public:
 	virtual void del(int index) = 0;
 };
 
+class ViewBox {
+	BASE_PLUGIN(ViewBox, ());
+public:
+	vec3 suncolor;
+	vec3 sundir;
+	
+	virtual void timestep(float curtime, float deltatime);
+};
+
 class GraphicsContext {
 	BASE_PLUGIN(GraphicsContext, ());
 public:
@@ -51,6 +62,7 @@ public:
 	~GraphicsContext();
 	
 	RenderBuf* blockbuf;
+	ViewBox* viewbox;
 	
 	void set_camera(vec3* newpos, vec2* newrot);
 	

@@ -37,6 +37,11 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 						// cout << "    SIDEBLOCK " << sideblock.globalpos << ' ' << sideblock.scale << endl;
 						if (sideblock->value == 0) {
 							data.facedata.faces[dir].texture = block->value;
+							data.facedata.faces[dir].sunlight = 0x0f;
+							data.facedata.faces[dir].blocklight = 0x00;
+							data.facedata.faces[dir].other = 0;
+							data.facedata.faces[dir].stuff = 0;
+							data.facearr[int(dir)*2+1] = 10;
 							visible = true;
 						}
 					}

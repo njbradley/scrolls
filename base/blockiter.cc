@@ -16,7 +16,7 @@ NodeIndex DirNodeIter::increment_func(NodeIndex nodepos) {
 
 
 
-bool FlagNodeIter::valid_tree() {
+bool FlagNodeIter::valid_tree() const {
 	bool result = has_flag(flag);
 	// reset_flag(flag);
 	return result;

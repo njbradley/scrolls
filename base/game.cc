@@ -5,12 +5,15 @@
 #include "blockiter.h"
 #include "terrain.h"
 
+#include <set>
+#include <sstream>
+
 DEFINE_PLUGIN(Game);
 
 
 EXPORT_PLUGIN(SingleGame);
 
-SingleGame::SingleGame(): world(ivec3(0,0,0), 128) {
+SingleGame::SingleGame(): world(ivec3(-64,0,-64), 128) {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
@@ -22,30 +25,46 @@ SingleGame::~SingleGame() {
 	plugdelete(controls);
 }
 
+void recurse2(NodeView node, std::set<string>& poses) {
+	if (node.continues()) {
+		for (int i = 0; i < 8; i ++) {
+			recurse2(node.child(i), poses);
+		}
+	} else {
+		std::stringstream ss;
+		ss << node.globalpos << ' ' << node.scale;
+		if (poses.count(ss.str()) != 0) {
+			cout << "DUP recurse2: " << ss.str() << endl;
+		} else {
+			poses.emplace(ss.str());
+		}
+	}
+}
+
+void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
+	if (node->flags & Block::CONTINUES_FLAG) {
+		for (int i = 0; i < 8; i ++) {
+			recurse(&node->children[i], globalpos + ivec3(NodeIndex(i)) * (scale/2), scale/2, poses);
+		}
+	} else {
+		std::stringstream ss;
+		ss << globalpos << ' ' << scale;
+		if (poses.count(ss.str()) != 0) {
+			cout << "DUP recurse: " << ss.str() << endl;
+		} else {
+			poses.emplace(ss.str());
+		}
+	}
+}
+
 void SingleGame::setup_gameloop() {
-	
-	cout << "START " << endl;
-	// for (NodeView node : BlockIterable<NodeIter>(world.rootview())) {
-	// 	if (node.continues()) continue;
-	// 	ivec3 pos = node.globalpos + node.scale/2;
-	// 	if (std::abs(pos.x/2 - pos.y) < node.scale/2) {
-	// 		node.split();
-	// 	} else {
-	// 		Block* block = new Block();
-	// 		block->value = pos.x/2 > pos.y;
-	// 		node.set_block(block);
-	// 		// cout << "ended at " << node.scale << endl;
-	// 	}
-	// }
 	
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
 	gen->generate_chunk(world.rootview());
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
 	
-	cout << "END " << endl;
 	
 	renderer->render(world.rootview(), graphics->blockbuf);
-	cout << "ENDEND" << endl;
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
@@ -58,6 +77,7 @@ void SingleGame::timestep() {
 	last_time = cur_time;
 	
 	spectator.timestep(cur_time, deltatime);
+	graphics->viewbox->timestep(cur_time, deltatime);
 	graphics->swap();
 	playing = !controls->key_pressed('Q');
 	// cout << spectator.position << ' ' << spectator.angle.x << ',' << spectator.angle.y << endl;

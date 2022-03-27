@@ -82,16 +82,22 @@ void GLAPIENTRY errorCallback( GLenum source,
             type, severity, message );
 }
 
+void myGlfwErrorFunc(int error_code, const char* str) {
+  std::cerr << "GLFW error (" << error_code << ") '" << str << "'" << endl;
+}
+
 void GLGraphics::init_graphics() {
-	ASSERT(glfwInit());
+  glfwSetErrorCallback(myGlfwErrorFunc);
 	
+  ASSERT_RUN(glfwInit());
+  
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-	
+  
 	window = glfwCreateWindow(screen_dims.x, screen_dims.y, "Scrolls - An Adventure Game", nullptr, nullptr);
 	static_window = window;
 	ASSERT(window != nullptr);
@@ -99,7 +105,7 @@ void GLGraphics::init_graphics() {
 	
   glfwMakeContextCurrent(window);
 	
-	ASSERT(glewInit() == GLEW_OK);
+	ASSERT_RUN(glewInit() == GLEW_OK);
 	
 	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(errorCallback, 0);
@@ -135,6 +141,9 @@ void GLGraphics::init_graphics() {
   mvMatID = glGetUniformLocation(block_program, "MVmat");
 	blockTexID = glGetUniformLocation(block_program, "textures");
 	
+  suncolorID = glGetUniformLocation(block_program, "suncolor");
+  sundirID = glGetUniformLocation(block_program, "sundir");
+  
 	glBindVertexArray(vertexarray);
 	GLuint blockbuffs[2];
 	glGenBuffers(2, blockbuffs);
@@ -199,6 +208,10 @@ void GLGraphics::block_draw_call() {
 	glUniformMatrix4fv(pMatID, 1, GL_FALSE, &P[0][0]);
 	glUniformMatrix4fv(mvMatID, 1, GL_FALSE, &MV[0][0]);
 	
+  glUniform3f(suncolorID, viewbox->suncolor.x, viewbox->suncolor.y, viewbox->suncolor.z);
+  vec3 sundir = MV * glm::vec4(viewbox->sundir.x, viewbox->sundir.y, viewbox->sundir.z, 0);
+  glUniform3f(sundirID, sundir.x, sundir.y, sundir.z);
+  
 	//// Vertex attribures : position, rotation, and scale
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);

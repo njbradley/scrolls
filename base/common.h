@@ -48,7 +48,15 @@ class TerrainGenerator;
 #define ERR(MSG) std::cerr << "ERR: '" << MSG << "'" << endl \
 	<< "at " << __PRETTY_FUNCTION__ << ": " << __LINE__ << " " __FILE__ << endl; \
 	std::terminate();
+
+#ifdef SCROLLS_DEBUG
 #define ASSERT(X) if (!(X)) {ERR("ASSERT(" #X ") failed");}
+#define ASSERT_RUN(X) ASSERT(X)
+#else
+#define ASSERT(X) ;
+#define ASSERT_RUN(X) (X);
+#endif
+
 
 struct Direction {
 	static constexpr ivec3 dir_array[] = {
@@ -56,16 +64,16 @@ struct Direction {
 	static constexpr int all[] = {0,1,2,3,4,5};
 	int index;
 	
-	Direction(int ind): index(ind) {}
-	Direction(ivec3 npos): index(0) {
+	constexpr Direction(int ind): index(ind) {}
+	constexpr Direction(ivec3 npos): index(0) {
 		for (const ivec3& pos : dir_array) {
 			if (pos == npos) break;
 			index ++;
 		}
 	}
 	
-	operator ivec3() { return dir_array[index]; }
-	operator int() { return index; }
+	constexpr operator ivec3() { return dir_array[index]; }
+	constexpr operator int() { return index; }
 };
 
 bool getKey(char let);

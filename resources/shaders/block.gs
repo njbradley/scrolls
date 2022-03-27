@@ -14,40 +14,48 @@ flat in float scale[];
 
 out vec2 UV;
 flat out uint tex;
+out vec3 light;
 // flat out uint rot;
 // flat out uint edges;
 // out vec2 outlight;
 
 uniform mat4 MVmat;
 uniform mat4 Pmat;
-// uniform vec3 sunlight;
+uniform vec3 sundir;
+uniform vec3 suncolor;
 
 float voxSize = 1;
 const float texSize = 0.5;
 
-bool blending_light = false;
-vec2 light;
-float num_lights;
+// bool blending_light = false;
+vec3 curlight;
+// float num_lights;
 uvec3 outattr;
 
+uint extract_uint4(uint val, uint index) {
+	return (val >> (index*4u)) & 0xfu;
+}
+
 vec2 get_light(uvec2 data, vec4 normal) {
-	// float sundot = -dot(sunlight, normal.xyz/voxSize);
-	// return vec2(float((data.y & 0xff000000u) >> 24u) - (sundot*5+5), float((data.y & 0xff0000u) >> 16u)) / 20;
-	return vec2(1,1);
+	float sundot = dot(sundir, normal.xyz/voxSize);
+	return vec2(float(extract_uint4(data.y, 0u)) - (sundot*3+3), float(extract_uint4(data.y, 2u))) / 15;
+	// return vec2(1,1);
 }
 
 void gen_attr(uvec2 data, vec4 normal) {
 	// outattr.z = 0u;
-	outattr.x = data.x;
+	outattr.x = data.x & 0xffffu;
 	// outattr.y = (data.y & 0xff00u) >> 8u;
-	// light = get_light(data, normal);
+	vec2 lightlevels = get_light(data, normal);
+	bool usesun = lightlevels.x > lightlevels.y;
+	curlight = float(usesun) * lightlevels.xxx * suncolor + float(!usesun) * lightlevels.yyy;
 }
 
 void set_attr() {
 	// edges = outattr.z;
 	tex = outattr.x;
 	// rot = outattr.y;
-	// outlight = light;
+	light = curlight;
 }
 
 bool is_quad_visible(vec4 position, vec4 normal) {

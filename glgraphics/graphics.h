@@ -37,6 +37,8 @@ protected:
 	GLuint pMatID;
 	GLuint mvMatID;
 	GLuint blockTexID;
+	GLuint suncolorID;
+	GLuint sundirID;
 	
 	GLuint vertexarray;
 	GLuint posbuffer;
