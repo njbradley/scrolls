@@ -1,6 +1,6 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC
-LIBS := -lGLEW -lGL -lglfw
+CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC -I /opt/homebrew/include/
+LIBS := -L /opt/homebrew/lib -lGLEW -lglfw -framework CoreVideo -framework OpenGL -framework IOKit
 LDFLAGS :=
 DLLFLAGS :=
 ifeq ($(BUILD),RELEASE)
