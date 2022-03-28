@@ -52,6 +52,17 @@ public:
 	virtual int get_height(ivec3 pos) = 0;
 };
 
+class TerrainDecorator {
+	BASE_PLUGIN(TerrainDecorator, (int seed));
+public:
+	int seed;
+	
+	TerrainDecorator(int nseed);
+	virtual ~TerrainDecorator() {}
+	
+	virtual void decorate_chunk(NodeView node) = 0;
+};
+
 // These are the methods that terrain shapes must implement
 //
 // struct TerrainShape {
@@ -91,6 +102,8 @@ struct ShapeResolver : public TerrainGenerator {
 	virtual void generate_chunk(NodeView node);
 	virtual int get_height(ivec3 pos);
 };
+
+
 
 
 #endif

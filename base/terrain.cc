@@ -111,7 +111,11 @@ TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
 
 
 
+DEFINE_PLUGIN(TerrainDecorator);
 
+TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
+	
+}
 
 
 
@@ -428,3 +432,14 @@ using TestWorld = ShapeResolver<
 	SolidType<Shift<AddVal<LandLevel, -5>, 0,5,0>, 2>
 >;
 EXPORT_PLUGIN_TEMPLATE(TestWorld);
+
+
+
+class NullDecorator : public TerrainDecorator {
+	PLUGIN(NullDecorator);
+public:
+	using TerrainDecorator::TerrainDecorator;
+	virtual void decorate_chunk(NodeView node) {}
+};
+
+EXPORT_PLUGIN(NullDecorator);

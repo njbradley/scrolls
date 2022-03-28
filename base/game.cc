@@ -13,7 +13,9 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-SingleGame::SingleGame(): world(ivec3(-64,0,-64), 128) {
+const int worldsize = 128;
+
+SingleGame::SingleGame(): world(ivec3(-worldsize/2,0,-worldsize/2), worldsize) {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
@@ -59,12 +61,24 @@ void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
 
 void SingleGame::setup_gameloop() {
 	
+	cout << "starting test " << BDIMS << endl;
+	
+	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
 	gen->generate_chunk(world.rootview());
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
+	cout << getTime() - start << " Time terrain " << endl;
 	
-	
+	start = getTime();
 	renderer->render(world.rootview(), graphics->blockbuf);
+	cout << getTime() - start << " Time render " << endl;
+	
+	start = getTime();
+	int num = 0;
+	for (BlockView view : BlockIterable<BlockIter>(world.rootview())) {
+		num ++;
+	}
+	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);

@@ -6,7 +6,7 @@
 // Number of times a block splits
 #define BDIMS 2
 // BDIMS^3
-#define BDIMS3 8
+#define BDIMS3 (BDIMS*BDIMS*BDIMS)
 
 struct Block {
 	int value = 0;
