@@ -1,4 +1,4 @@
-#include "blocks.h"
+#include "arrblocks.h"
 #include "game.h"
 
 int main() {

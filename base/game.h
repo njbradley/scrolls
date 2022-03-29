@@ -4,7 +4,7 @@
 #include "common.h"
 #include "plugins.h"
 
-#include "blocks.h"
+#include "arrblocks.h"
 #include "player.h"
 
 class Game {

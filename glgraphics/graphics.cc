@@ -108,7 +108,7 @@ void GLGraphics::init_graphics() {
 	ASSERT_RUN(glewInit() == GLEW_OK);
 	
 	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(errorCallback, 0);
+	// glDebugMessageCallback(errorCallback, 0);
 	
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
@@ -150,7 +150,7 @@ void GLGraphics::init_graphics() {
 	posbuffer = blockbuffs[0];
 	databuffer = blockbuffs[1];
 	
-	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 100000);
+	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 10000000);
 	
 	glfwSwapInterval(1);
 }

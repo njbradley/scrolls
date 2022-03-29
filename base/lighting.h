@@ -9,14 +9,14 @@ class LightEngine {
 public:
 	virtual ~LightEngine() {}
 	
-	virtual bool update(NodeView node) = 0;
+	virtual bool update(BlockView node) = 0;
 };
 
 
 class DefaultLight : public LightEngine {
 	PLUGIN(DefaultLight);
 public:
-	virtual bool update(NodeView node);
+	virtual bool update(BlockView node);
 };
 
 #endif
