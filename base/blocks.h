@@ -8,6 +8,33 @@
 // BDIMS^3
 #define BDIMS3 (BDIMS*BDIMS*BDIMS)
 
+/*
+All the voxel data is stored in a voxel tree, where there is a root node
+the size of the world, which is divided into 8 smaller cubes, which
+then keep dividing as needed to represent the world. The internal nodes
+of the tree are represented as Node objects, and the leaf nodes
+are Block objects.
+
+Example:
++------------+
+|+----++----+|
+||    ||[][]||
+||    ||[][]||
+|+----++----+|
+||[][]||    ||
+||[][]||    ||
+|+----++----+|
++------------+
+
+In the example, every box is a node, and all the boxes that are not
+subdivided would be the leaf nodes
+
+When manipulating nodes in the tree, you will rarely interact
+with raw Node* pointers, instead use the NodeView and similar
+classes, which wrap a Node* pointer with helpful functions and
+bookeeping of size and position
+*/
+
 struct Block {
 	int value = 0;
 	int renderindex = -1;
@@ -37,6 +64,9 @@ struct Node {
 
 // struct that represents an index into
 // a inner node
+// can be used to convert between a position
+// in child space (ie 0,1,0) to an index
+// in the children array (ie 4)
 struct NodeIndex {
 	const int index;
 	
@@ -54,7 +84,11 @@ struct NodeIndex {
 
 // class that allows reading/modifying
 // of the octree
-//
+// A nodeview points to a position on the block tree, while
+// also keeping track of the current position and size of the
+// node pointed to. the view can be moved around by methods
+// like step_up/down/side or moveto
+// The node can also be modified using split/join and set methods
 class NodeView {
 public:
 	ivec3 globalpos;
@@ -103,6 +137,9 @@ public:
 	Node* node = nullptr;
 };
 
+// BlockView is a more specific NodeView that is restricted
+// to only leaf nodes. If constructed with a non leaf NodeView
+// step_down is called until a block is found.
 class BlockView : public NodeView {
 public:
 	BlockView();
@@ -147,6 +184,8 @@ public:
 };
 	
 
+// This class owns a full voxel tree, that is located at globalpos and
+// is scale big.
 class BlockContainer {
 public:
 	ivec3 globalpos;
