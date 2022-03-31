@@ -1,8 +1,23 @@
 CXX := g++
 CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC
-LIBS := -lGLEW -lGL -lglfw
 LDFLAGS :=
 DLLFLAGS :=
+
+ifeq ($(OS),Windows_NT)
+LIBS := -lmingw32 -luser32 -lgdi32 -lshell32 -lglew32 -lglfw3 -lopengl32
+
+else
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+LIBS := -lGLEW -lGL -lglfw
+
+endif
+ifeq ($(UNAME_S),Darwin)
+LIBS := -lGLEW -lglfw -framework CoreVideo -framework OpenGL -framework IOKit
+
+endif
+endif
+
 ifeq ($(BUILD),RELEASE)
 OPT := -O3
 else
