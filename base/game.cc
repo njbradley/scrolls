@@ -15,10 +15,44 @@ EXPORT_PLUGIN(SingleGame);
 
 const int worldsize = 128;
 
-SingleGame::SingleGame(): world(ivec3(-worldsize/2,0,-worldsize/2), worldsize) {
+// From the chunk we are currently in or the position we are in?
+const int renderdistance = 1; // Initially 3x3x3
+const int chunks = pow(2*(renderdistance + 1), 3);
+
+SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
+
+	generatedWorld.reserve(chunks);
+
+
+	// Simple loop first.
+	// TODO: OPTIMIZE LOOP MAYBE?
+	int x = -2*renderdistance;
+	int y = -2*renderdistance;
+	int z = -2*renderdistance;
+	for (int i = 0; i < chunks; i++) {
+		// cout << "blah" << endl;
+		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
+		if (x == 2*renderdistance) {
+			if (z == 2*renderdistance) {
+				if (y == 2*renderdistance) {
+					// Done
+				} else {
+					y++;
+					x = -2*renderdistance;
+					z = -2*renderdistance;
+				}
+			} else {
+				z++;
+				x = -2*renderdistance;
+			}
+		} else {
+			x++;
+		}
+	}
+
 }
 
 SingleGame::~SingleGame() {
@@ -65,18 +99,26 @@ void SingleGame::setup_gameloop() {
 	
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
-	gen->generate_chunk(world.rootview());
+	for (BlockContainer& bc : generatedWorld) {
+		gen->generate_chunk(bc.rootview());
+	}
+	
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();
-	renderer->render(world.rootview(), graphics->blockbuf);
+	for (BlockContainer& bc : generatedWorld) {
+		renderer->render(bc.rootview(), graphics->blockbuf);
+	}
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
-	for (BlockView view : BlockIterable<BlockIter>(world.rootview())) {
-		num ++;
+
+	for (BlockContainer& bc : generatedWorld ) {
+		for (BlockView view : BlockIterable<BlockIter>(bc.rootview())) {
+			num ++;
+		}
 	}
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
