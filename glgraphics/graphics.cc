@@ -150,7 +150,7 @@ void GLGraphics::init_graphics() {
 	posbuffer = blockbuffs[0];
 	databuffer = blockbuffs[1];
 	
-	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 100000);
+	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 1000000);
 	
 	glfwSwapInterval(1);
 }
