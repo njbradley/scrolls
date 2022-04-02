@@ -157,54 +157,47 @@ Blocktype ShapeResolver<Shapes...>::gen_func(ivec3 globalpos, int scale) {
 
 template <typename ... Shapes>
 template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-Blocktype ShapeResolver<Shapes...>::gen_block(ostream& ofile, ivec3 globalpos, int scale) {
-	Blocktype val = gen_func<FirstShape>(globalpos, scale);
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
+	Blocktype val = gen_func<FirstShape>(node.globalpos, node.scale);
 	if (val == BLOCK_NULL) {
-		return gen_block<SecondShape,OtherShapes...>(ofile, globalpos, scale);
+		return gen_block<SecondShape,OtherShapes...>(node);
 	} else {
-		return gen_block<FirstShape,SecondShape,OtherShapes...>(ofile, globalpos, scale, val);
+		return gen_block<FirstShape,SecondShape,OtherShapes...>(node, val);
 	}
 }
 
 template <typename ... Shapes>
 template <typename Shape>
-Blocktype ShapeResolver<Shapes...>::gen_block(ostream& ofile, ivec3 globalpos, int scale) {
-	Blocktype val = gen_func<Shape>(globalpos, scale);
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
+	Blocktype val = gen_func<Shape>(node.globalpos, node.scale);
 	if (val == BLOCK_NULL) {
 		val = 0;
 	}
-	return gen_block<Shape>(ofile, globalpos, scale, val);
+	return gen_block<Shape>(node, val);
 }
 
 
 
 template <typename ... Shapes>
 template <typename ... CurShapes>
-Blocktype ShapeResolver<Shapes...>::gen_block(ostream& ofile, ivec3 globalpos, int scale, Blocktype myval) {
-  if (myval != BLOCK_SPLIT or scale == 1) {
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node, Blocktype myval) {
+  if (myval != BLOCK_SPLIT or node.scale == 1) {
 		if (myval == BLOCK_NULL) myval = 0;
-    ofile.put(myval);
+		node.set_block(new Block(myval));
     return myval;
   } else {
-    std::stringstream ss;
-    ss.put('{');
-    Blocktype val = gen_block<CurShapes...>(ss, globalpos, scale/BDIMS);
+		node.split();
+    Blocktype val = gen_block<CurShapes...>(node.child(0));
     bool all_same = val != -1;
-    for (int x = 0; x < BDIMS; x ++) {
-      for (int y = 0; y < BDIMS; y ++) {
-        for (int z = 0; z < BDIMS; z ++) {
-          if (x > 0 or y > 0 or z > 0) {
-            Blocktype newval = gen_block<CurShapes...>(ss, globalpos + ivec3(x,y,z)*(scale/BDIMS), scale/BDIMS);
-            all_same = all_same and newval == val;
-          }
-        }
-      }
-    }
+		for (int i = 1; i < BDIMS3; i ++) {
+			Blocktype newval = gen_block<CurShapes...>(node.child(i));
+			all_same = all_same and newval == val;
+		}
     if (all_same) {
-      ofile.put(val);
+			node.join();
+			node.set_block(new Block(val));
       return val;
     } else {
-      ofile << ss.rdbuf();
       return -1;
     }
   }
@@ -214,9 +207,9 @@ Blocktype ShapeResolver<Shapes...>::gen_block(ostream& ofile, ivec3 globalpos, i
 
 template <typename ... Shapes>
 void ShapeResolver<Shapes...>::generate_chunk(NodeView node) {
-	std::stringstream ss;
-	gen_block<Shapes...>(ss, node.globalpos, node.scale);
-	node.from_file(ss);
+	// std::stringstream ss;
+	gen_block<Shapes...>(node);
+	// node.from_file(ss);
 }
 
 template <typename ... Shapes>

@@ -93,11 +93,11 @@ struct ShapeResolver : public TerrainGenerator {
 	Blocktype gen_func(ivec3 pos, int scale);
 	
 	template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-	Blocktype gen_block(ostream& ofile, ivec3 globalpos, int scale);
+	Blocktype gen_block(NodeView node);
 	template <typename Shape>
-	Blocktype gen_block(ostream& ofile, ivec3 globalpos, int scale);
+	Blocktype gen_block(NodeView node);
 	template <typename ... CurShapes>
-	Blocktype gen_block(ostream& ofile, ivec3 globalpos, int scale, Blocktype mytype);
+	Blocktype gen_block(NodeView node, Blocktype mytype);
 	
 	virtual void generate_chunk(NodeView node);
 	virtual int get_height(ivec3 pos);
