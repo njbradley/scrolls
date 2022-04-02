@@ -13,11 +13,11 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 128;
+const int worldsize = 64;
 
 // From the chunk we are currently in or the position we are in?
-const int renderdistance = 1; // Initially 3x3x3
-const int chunks = pow(2*(renderdistance + 1), 3);
+const int renderdistance = 8; // Initially 3x3x3
+const int chunks = pow((2*renderdistance) + 1, 3);
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
@@ -29,24 +29,25 @@ SingleGame::SingleGame() {
 
 	// Simple loop first.
 	// TODO: OPTIMIZE LOOP MAYBE?
-	int x = -2*renderdistance;
-	int y = -2*renderdistance;
-	int z = -2*renderdistance;
+	int x = -renderdistance;
+	int y = -renderdistance;
+	int z = -renderdistance;
 	for (int i = 0; i < chunks; i++) {
-		// cout << "blah" << endl;
+		cout << "blah: " << i << endl;
+		cout << "x: " << x << " y: " << y << " z: " << z << endl;
 		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
-		if (x == 2*renderdistance) {
-			if (z == 2*renderdistance) {
-				if (y == 2*renderdistance) {
+		if (x == renderdistance) {
+			if (z == renderdistance) {
+				if (y == renderdistance) {
 					// Done
 				} else {
 					y++;
-					x = -2*renderdistance;
-					z = -2*renderdistance;
+					x = -renderdistance;
+					z = -renderdistance;
 				}
 			} else {
 				z++;
-				x = -2*renderdistance;
+				x = -renderdistance;
 			}
 		} else {
 			x++;
