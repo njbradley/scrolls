@@ -139,7 +139,7 @@ Block* NodeView::swap_block(Block* block) {
 }
 
 void NodeView::from_file(istream& ifile) {
-	for (NodeView curnode : BlockIterable<BlockIter>(*this)) {
+	for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
 		if (ifile.peek() == '{') {
 			ifile.get();
 			curnode.split();
@@ -153,7 +153,7 @@ void NodeView::from_file(istream& ifile) {
 }
 
 void NodeView::to_file(ostream& ofile) {
-	for (NodeView curnode : BlockIterable<BlockIter>(*this)) {
+	for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
 		if (curnode.continues()) {
 			ofile.put('{');
 		} else if (isnull()) {

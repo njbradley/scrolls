@@ -7,6 +7,11 @@
 
 #include <set>
 #include <sstream>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sys/types.h>
+ #include <sys/stat.h>
 
 DEFINE_PLUGIN(Game);
 
@@ -100,7 +105,20 @@ void SingleGame::setup_gameloop() {
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
 	for (BlockContainer& bc : generatedWorld) {
-		gen->generate_chunk(bc.rootview());
+		std::ostringstream oss;
+		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
+		struct stat buf;
+		// If the file does not exist, create terrain.
+		// Otherwise, read from file.
+		if (stat(oss.str().c_str(), &buf) != 0) {
+			gen->generate_chunk(bc.rootview());
+			std::ofstream outfile(oss.str(), std::ios::binary);
+			bc.rootview().to_file(outfile);
+			outfile.close();
+		} else {
+			std::ifstream t(oss.str().c_str(), std::ios::binary);	
+			bc.rootview().from_file(t);
+		}
 	}
 	
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
