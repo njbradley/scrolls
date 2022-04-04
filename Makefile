@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC
+CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC -I /opt/homebrew/include/
 LDFLAGS :=
 DLLFLAGS :=
 
@@ -13,7 +13,7 @@ LIBS := -lGLEW -lGL -lglfw
 
 endif
 ifeq ($(UNAME_S),Darwin)
-LIBS := -lGLEW -lglfw -framework CoreVideo -framework OpenGL -framework IOKit
+LIBS := -L /opt/homebrew/lib -lGLEW -lglfw -framework CoreVideo -framework OpenGL -framework IOKit
 
 endif
 endif

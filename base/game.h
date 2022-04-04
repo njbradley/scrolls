@@ -31,7 +31,9 @@ protected:
 	GraphicsContext* graphics;
 	Renderer* renderer;
 	
-	BlockContainer world;
+	// Allocate on the heap because we want to change render distance.
+	vector<BlockContainer> generatedWorld;
+
 	Spectator spectator;
 	Controls* controls;
 };

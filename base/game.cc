@@ -7,18 +7,57 @@
 
 #include <set>
 #include <sstream>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sys/types.h>
+ #include <sys/stat.h>
 
 DEFINE_PLUGIN(Game);
 
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 1024;
+const int worldsize = 512;
 
-SingleGame::SingleGame(): world(ivec3(-worldsize/2,0,-worldsize/2), worldsize) {
+const int renderdistance = 2; 
+const int chunks = 8;
+
+SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
+
+	generatedWorld.reserve(chunks);
+
+
+	// Simple loop first.
+	// TODO: OPTIMIZE LOOP MAYBE?
+	int x = -1;
+	int y = -1;
+	int z = -1;
+	for (int i = 0; i < chunks; i++) {
+		cout << "blah: " << i << endl;
+		cout << "x: " << x << " y: " << y << " z: " << z << endl;
+		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
+		if (x == 0) {
+			if (z == 0) {
+				if (y == 0) {
+					// Done
+				} else {
+					y++;
+					x = -1;
+					z = -1;
+				}
+			} else {
+				z++;
+				x = -1;
+			}
+		} else {
+			x++;
+		}
+	}
+
 }
 
 SingleGame::~SingleGame() {
@@ -65,18 +104,39 @@ void SingleGame::setup_gameloop() {
 	
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
-	gen->generate_chunk(world.rootview());
+	for (BlockContainer& bc : generatedWorld) {
+		std::ostringstream oss;
+		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
+		struct stat buf;
+		// If the file does not exist, create terrain.
+		// Otherwise, read from file.
+		if (stat(oss.str().c_str(), &buf) != 0) {
+			gen->generate_chunk(bc.rootview());
+			std::ofstream outfile(oss.str(), std::ios::binary);
+			bc.rootview().to_file(outfile);
+			outfile.close();
+		} else {
+			std::ifstream t(oss.str().c_str(), std::ios::binary);	
+			bc.rootview().from_file(t);
+		}
+	}
+	
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();
-	renderer->render(world.rootview(), graphics->blockbuf);
+	for (BlockContainer& bc : generatedWorld) {
+		renderer->render(bc.rootview(), graphics->blockbuf);
+	}
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
-	for (BlockView view : BlockIterable<BlockIter>(world.rootview())) {
-		num ++;
+
+	for (BlockContainer& bc : generatedWorld ) {
+		for (BlockView view : BlockIterable<BlockIter>(bc.rootview())) {
+			num ++;
+		}
 	}
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	

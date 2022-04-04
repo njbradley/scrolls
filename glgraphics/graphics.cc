@@ -108,7 +108,7 @@ void GLGraphics::init_graphics() {
 	ASSERT_RUN(glewInit() == GLEW_OK);
 	
 	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(errorCallback, 0);
+	// glDebugMessageCallback(errorCallback, 0);
 	
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
