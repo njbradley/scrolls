@@ -7,6 +7,8 @@
 #include "blocks.h"
 #include "player.h"
 
+#include <thread>
+
 class Game {
 	BASE_PLUGIN(Game, ());
 public:
@@ -31,11 +33,17 @@ protected:
 	GraphicsContext* graphics;
 	Renderer* renderer;
 	
+	TerrainGenerator* generator;
+
 	// Allocate on the heap because we want to change render distance.
 	vector<BlockContainer> generatedWorld;
 
 	Spectator spectator;
 	Controls* controls;
+	std::thread nick;
+
+	void loadOrGenerateTerrain(BlockContainer& bc);
+	void threadRenderJob();
 };
 
 #endif

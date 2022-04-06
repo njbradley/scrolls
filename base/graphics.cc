@@ -29,6 +29,7 @@ GraphicsContext::GraphicsContext() {
 
 GraphicsContext::~GraphicsContext() {
 	plugdelete(blockbuf);
+	plugdelete(viewbox);
 }
 
 void GraphicsContext::set_camera(vec3* newpos, vec2* newrot) {

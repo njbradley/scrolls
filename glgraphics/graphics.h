@@ -4,6 +4,8 @@
 #include "common.h"
 #include "base/graphics.h"
 
+#include <mutex>
+#include <unordered_map>
 
 class GLRenderBuf : public RenderBuf {
 	PLUGIN(GLRenderBuf);
@@ -13,11 +15,15 @@ public:
 	int num_points = 0;
 	int allocated_space = 0;
 	vector<int> empties;
-	
+	std::unordered_map<int,RenderData> changes;
+	std::mutex lock;
+
 	void set_buffers(GLuint verts, GLuint databuf, int start_size);
 	virtual int add(const RenderData& data);
 	virtual void edit(int index, const RenderData& data);
 	virtual void del(int index);
+	virtual void sync();
+
 };
 
 class GLGraphics : public GraphicsContext {

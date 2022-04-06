@@ -23,31 +23,49 @@ void GLRenderBuf::set_buffers(GLuint verts, GLuint databuf, int start_size) {
 
 int GLRenderBuf::add(const RenderData& data) {
 	int pos;
-	if (empties.size() > 0) {
-		pos = empties.back();
-		empties.erase(empties.begin() + (empties.size()-1));
-	} else {
-		pos = num_points++;
+	{
+		cout << __LINE__ << endl;
+
+		std::lock_guard guard(lock);
+		if (empties.size() > 0) {
+			pos = empties.back();
+			empties.erase(empties.begin() + (empties.size()-1));
+		} else {
+			pos = num_points++;
+		}
 	}
 	edit(pos, data);
 	return pos;
 }
 
 void GLRenderBuf::edit(int index, const RenderData& data) {
-	glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
-  glBufferSubData(GL_ARRAY_BUFFER, index*sizeof(RenderPosData), sizeof(RenderPosData), data.posarr);
-  // if (!data.type.isnull()) {
-    glBindBuffer(GL_ARRAY_BUFFER, databuffer);
-    glBufferSubData(GL_ARRAY_BUFFER, index*sizeof(RenderFaceData), sizeof(RenderFaceData), data.facearr);
-  // }
+		cout << __LINE__ << endl;
+
+	std::lock_guard guard(lock);
+	changes[index] = data;
 }
 
 void GLRenderBuf::del(int index) {
-	empties.push_back(index);
+	cout << __LINE__ << endl;
+	{
+		std::lock_guard guard(lock);
+		empties.push_back(index);
+	}
 	edit(index, RenderData());
 }
 
-
+void GLRenderBuf::sync() {
+	cout << __LINE__ << endl;
+	lock.lock();
+	for (std::pair<int,RenderData> change : changes) {
+		glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, change.first*sizeof(RenderPosData), sizeof(RenderPosData), change.second.posarr);
+		glBindBuffer(GL_ARRAY_BUFFER, databuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, change.first*sizeof(RenderFaceData), sizeof(RenderFaceData), change.second.facearr);
+	}
+	changes.clear();
+	lock.unlock();
+}
 
 
 
@@ -156,7 +174,6 @@ void GLGraphics::init_graphics() {
 }
 
 void GLGraphics::load_textures() {
-  
   vector<string> paths;
   for (std::filesystem::path path : std::filesystem::directory_iterator(pluginloader.find_path("textures/blocks/"))) {
     paths.push_back(path.string());
@@ -233,7 +250,7 @@ void GLGraphics::block_draw_call() {
 	glUniform1i(blockTexID, 0);
 	
 	glDrawArrays(GL_POINTS, 0, ((GLRenderBuf*)blockbuf)->num_points);
-	
+
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
@@ -243,9 +260,20 @@ void GLGraphics::block_draw_call() {
 }
 
 void GLGraphics::swap() {
-	block_draw_call();
+	cout << __LINE__ << endl;
+
+
+	blockbuf->sync();
+	((GLRenderBuf*) blockbuf)->lock.lock();
+	cout << __LINE__ << endl;
+
 	
+	block_draw_call();
+		cout << __LINE__ << endl;
+
 	glfwSwapBuffers(window);
+	((GLRenderBuf*) blockbuf)->lock.unlock();
+
 	glfwPollEvents();
 }
 

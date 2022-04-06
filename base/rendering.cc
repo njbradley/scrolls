@@ -7,6 +7,15 @@ DEFINE_PLUGIN(Renderer);
 
 EXPORT_PLUGIN(DefaultRenderer);
 
+void DefaultRenderer::derender(NodeView nv, RenderBuf* renderbuf) {
+	for (BlockView block : BlockIterable<BlockIter>(nv)) {
+		if (block->renderindex != -1) {
+			renderbuf->del(block->renderindex);
+		}
+		block->renderindex = -1;
+	}
+}
+
 bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	bool changed = false;
 	
@@ -46,10 +55,10 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 						}
 					}
 				}
-				// else {
-				// 	data.facedata.faces[dir].texture = block->value;
-				// 	visible = true;
-				// }
+				else {
+					data.facedata.faces[dir].texture = block->value;
+					visible = true;
+				}
 					
 			}
 			

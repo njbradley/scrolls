@@ -42,6 +42,7 @@ public:
 	virtual int add(const RenderData& data) = 0;
 	virtual void edit(int index, const RenderData& data) = 0;
 	virtual void del(int index) = 0;
+	virtual void sync() = 0;
 };
 
 class ViewBox {
