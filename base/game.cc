@@ -13,7 +13,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 1024;
+const int worldsize = 256;
 
 SingleGame::SingleGame(): world(ivec3(-worldsize/2,0,-worldsize/2), worldsize) {
 	graphics = GraphicsContext::plugnew();
