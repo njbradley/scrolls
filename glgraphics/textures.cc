@@ -49,6 +49,7 @@ GLuint load_array(vector<string>& paths, int size) {
 		ASSERT(width == size and height == size and channels == 4);
 		std::copy(newdata, newdata + (size*size*4), data + offset);
 		offset += size*size*4;
+		delete[] newdata;
 	}
 	
 	GLuint textureID;

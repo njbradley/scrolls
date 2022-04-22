@@ -60,14 +60,17 @@ GLGraphics::GLGraphics() {
 
 GLGraphics::~GLGraphics() {
 	glBindVertexArray(vertexarray);
-	glDeleteBuffers(1, &posbuffer);
+  glDeleteBuffers(1, &posbuffer);
 	glDeleteBuffers(1, &databuffer);
 	
 	glDeleteProgram(block_program);
 	
 	glDeleteVertexArrays(1, &vertexarray);
 	
+  glfwDestroyWindow(window);
+  
 	glfwTerminate();
+  cout << "done"<< endl;
 }
 
 void GLAPIENTRY errorCallback( GLenum source,

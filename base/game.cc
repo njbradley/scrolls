@@ -13,7 +13,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 256;
+const int worldsize = 64;
 
 SingleGame::SingleGame(): world(ivec3(-worldsize/2,0,-worldsize/2), worldsize) {
 	graphics = GraphicsContext::plugnew();
@@ -65,23 +65,25 @@ void SingleGame::setup_gameloop() {
 	
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
-	gen->generate_chunk(world.rootview());
+	gen->generate_chunk(world.root());
 	cout << gen->get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();
-	renderer->render(world.rootview(), graphics->blockbuf);
+	renderer->render(world.root(), graphics->blockbuf);
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
-	for (BlockView view : BlockIterable<BlockIter>(world.rootview())) {
+	for (BlockView view : BlockIterable<BlockIter>(world.root())) {
 		num ++;
 	}
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
+	
+	plugdelete(gen);
 }
 
 void SingleGame::timestep() {

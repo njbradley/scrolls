@@ -87,7 +87,7 @@ bool NodeView::moveto(ivec3 pos, int goalscale) {
 }
 
 void NodeView::join() {
-	delete[] node->children;
+	del_tree(node);
 	node->flags &= ~Block::CONTINUES_FLAG;
 	node->block = nullptr;
 	on_change();
@@ -156,17 +156,61 @@ void NodeView::to_file(ostream& ofile) {
 	for (NodeView curnode : BlockIterable<BlockIter>(*this)) {
 		if (curnode.continues()) {
 			ofile.put('{');
-		} else if (isnull()) {
-			ofile.put('~');
-		} else {
+		} else if (hasblock()) {
 			ofile.put(curnode.node->block->value);
+		} else {
+			ofile.put('~');
 		}
 	}
+}
+
+void NodeView::copy_tree(Node* src, Node* dest) {
+	*dest = *src;
+	if (src->flags & Block::CONTINUES_FLAG) {
+		dest->children = new Node[BDIMS3];
+		for (int i = 0; i < BDIMS3; i ++) {
+			dest->children[i].parent = dest;
+			copy_tree(&src->children[i], &dest->children[i]);
+		}
+	} else if (src->block != nullptr) {
+		dest->block = new Block(*node->block);
+	}
+}
+
+void NodeView::copy_tree(NodeView other) {
+	del_tree(node);
+	copy_tree(other.node, node);
+	on_change();
+}
+
+void NodeView::swap_tree(NodeView other) {
+	std::swap(*node, *other.node);
+	on_change();
 }
 
 void NodeView::on_change() {
 	set_flag(Block::RENDER_FLAG);
 }
+
+void NodeView::del_tree(Node* node) {
+	if (node->flags & Block::CONTINUES_FLAG) {
+		for (int i = 0; i < BDIMS3; i ++) {
+			del_tree(&node->children[i]);
+		}
+		delete[] node->children;
+	} else if (node->block != nullptr) {
+		delete node->block;
+	}
+	node->children = nullptr;
+}
+
+
+
+
+
+
+
+
 
 BlockView::BlockView() {
 	
@@ -239,21 +283,31 @@ NodeIter NodeIter::operator++() {
 
 
 
-BlockContainer::BlockContainer(ivec3 gpos, int nscale): globalpos(gpos), scale(nscale) {
-	root = new Node();
-	root->block = nullptr;
+BlockContainer::BlockContainer(ivec3 gpos, int nscale): NodeView(new Node(), gpos, nscale) {
+	node->block = nullptr;
 }
 
-BlockView BlockContainer::get(ivec3 pos) {
-	NodeView result (root, globalpos, scale);
-	return BlockView(result.get_global(pos, 1));
+BlockContainer::~BlockContainer() {
+	del_tree(node);
+	delete node;
 }
 
-NodeView BlockContainer::get_global(ivec3 pos, int w) {
-	NodeView result (root, globalpos, scale);
-	return result.get_global(pos, w);
+BlockContainer::BlockContainer(const BlockContainer& other): NodeView(other) {
+	node = new Node();
+	root().copy_tree(other.root());
 }
 
-NodeView BlockContainer::rootview() {
-	return NodeView(root, globalpos, scale);
+BlockContainer& BlockContainer::operator=(BlockContainer other) {
+	swap(other);
+	return *this;
+}
+
+void BlockContainer::swap(BlockContainer& other) {
+	std::swap(node, other.node);
+	std::swap(globalpos, other.globalpos);
+	std::swap(scale, other.scale);
+}
+
+NodeView BlockContainer::root() const {
+	return NodeView(*this);
 }
