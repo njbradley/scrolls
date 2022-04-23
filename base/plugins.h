@@ -5,8 +5,14 @@
 
 /*
 this file defines the plugin system used to allow parts
-of the project to be swapped easily, for example to allow
-for different graphics implementations.
+of the project to be swapped easily and for parts to be
+encapsulated from the main code base.
+
+an example of this is the class GraphicsContext, and its
+helper class RenderBuf. These abstract classes define an interface
+for the graphics code, and then the main game code uses this interface
+without worring about graphics libraries. The implementation using
+opengl is separated and encapsulated in another folder.
 
 When making a base plugin, use the BASE_PLUGIN(...) macro in the class
 definition, and then use the DEFINE_PLUGIN(...) or DEFINE_AND_EXPORT_PLUGIN(...)

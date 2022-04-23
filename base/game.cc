@@ -18,9 +18,9 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 512;
+const int worldsize = 128;
 
-const int renderdistance = 2; 
+const int renderdistance = 2;
 const int chunks = 8;
 
 SingleGame::SingleGame() {
@@ -39,6 +39,7 @@ SingleGame::SingleGame() {
 	for (int i = 0; i < chunks; i++) {
 		cout << "blah: " << i << endl;
 		cout << "x: " << x << " y: " << y << " z: " << z << endl;
+    // generatedWorld.emplace_back(ivec3(x, y, z)*worldsize, worldsize);
 		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
 		if (x == 0) {
 			if (z == 0) {
@@ -104,6 +105,7 @@ void SingleGame::setup_gameloop() {
 	
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
+  
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
 		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
@@ -111,13 +113,13 @@ void SingleGame::setup_gameloop() {
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
 		if (stat(oss.str().c_str(), &buf) != 0) {
-			gen->generate_chunk(bc.rootview());
+			gen->generate_chunk(bc.root());
 			std::ofstream outfile(oss.str(), std::ios::binary);
-			bc.rootview().to_file(outfile);
+			bc.to_file(outfile);
 			outfile.close();
 		} else {
-			std::ifstream t(oss.str().c_str(), std::ios::binary);	
-			bc.rootview().from_file(t);
+			std::ifstream t(oss.str().c_str(), std::ios::binary);
+			bc.from_file(t);
 		}
 	}
 	
@@ -125,16 +127,18 @@ void SingleGame::setup_gameloop() {
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();
+  
 	for (BlockContainer& bc : generatedWorld) {
-		renderer->render(bc.rootview(), graphics->blockbuf);
+		renderer->render(bc.root(), graphics->blockbuf);
 	}
+  
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
 
 	for (BlockContainer& bc : generatedWorld ) {
-		for (BlockView view : BlockIterable<BlockIter>(bc.rootview())) {
+		for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
 			num ++;
 		}
 	}
@@ -142,6 +146,8 @@ void SingleGame::setup_gameloop() {
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
+	
+	plugdelete(gen);
 }
 
 void SingleGame::timestep() {

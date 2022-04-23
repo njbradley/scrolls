@@ -4,6 +4,9 @@
 #include "common.h"
 #include "plugins.h"
 
+// plugin that handles button and mouse input, as this
+// is normally done with the same library that creates
+// the window
 class Controls { public:
 	BASE_PLUGIN(Controls, ());
 	
@@ -19,9 +22,11 @@ class Controls { public:
 	virtual int scroll_rel() = 0;
 };
 
+// simple player class, has no physics and
+// flies around
 class Spectator { public:
-	vec3 position;
-	vec2 angle;
+	vec3 position = vec3(0,0,0);
+	vec2 angle = vec2(0,0);
 	Controls* controller = nullptr;
 	
 	void timestep(float curtime, float deltatime);
