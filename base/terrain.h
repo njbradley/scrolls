@@ -31,6 +31,7 @@ int hash4(int seed, ivec2 pos, int c, int d);
 
 float randfloat(int seed, int a, int b, int c, int d);
 
+ivec3 randivec3(int seed, int a, int b, int c, int d);
 vec3 randvec3(int seed, int a, int b, int c, int d);
 vec2 randvec2(int seed, int a, int b, int c, int d);
 
@@ -41,15 +42,21 @@ float fractal_perlin2d(vec2 pos, float scale, float divider, int seed, int layer
 float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer);
 
 class TerrainGenerator {
-	BASE_PLUGIN(TerrainGenerator, (int seed));
 public:
 	int seed;
+	vector<TerrainShape*> shapes;
+	int total_max = 0;
+	int total_deriv = 0;
+	int block_type = 1;
 	
 	TerrainGenerator(int seed);
 	virtual ~TerrainGenerator() {}
 	
-	virtual void generate_chunk(NodeView node) = 0;
-	virtual int get_height(ivec3 pos) = 0;
+	void generate_chunk(NodeView node);
+	
+	int gen_node(NodeView node);
+	
+	int get_height(ivec3 pos);
 };
 
 class TerrainDecorator {
@@ -62,6 +69,19 @@ public:
 	
 	virtual void decorate_chunk(NodeView node) = 0;
 };
+
+struct TerrainShape {
+	BASE_PLUGIN(TerrainShape, (int seed));
+public:
+	int seed;
+	float max_deriv;
+	float max_val;
+	
+	TerrainShape(int nseed): seed(nseed) {}
+	
+	virtual float gen_value(vec3 pos) = 0;
+};
+	
 
 // These are the methods that terrain shapes must implement
 //
@@ -80,7 +100,7 @@ public:
 // 	static Blocktype block_val();
 // };
 
-
+/*
 template <typename ... Shapes>
 struct ShapeResolver : public TerrainGenerator {
 	PLUGIN(ShapeResolver);
@@ -101,7 +121,7 @@ struct ShapeResolver : public TerrainGenerator {
 	
 	virtual void generate_chunk(NodeView node);
 	virtual int get_height(ivec3 pos);
-};
+};*/
 
 
 

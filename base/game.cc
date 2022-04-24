@@ -18,10 +18,12 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 128;
+const int worldsize = 512;
 
 const int renderdistance = 2;
 const int chunks = 8;
+
+const bool overwrite_saves = true;
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
@@ -104,7 +106,7 @@ void SingleGame::setup_gameloop() {
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
-	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
+	TerrainGenerator gen (12345);
   
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
@@ -112,8 +114,8 @@ void SingleGame::setup_gameloop() {
 		struct stat buf;
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
-		if (stat(oss.str().c_str(), &buf) != 0) {
-			gen->generate_chunk(bc.root());
+		if (stat(oss.str().c_str(), &buf) != 0 or overwrite_saves) {
+			gen.generate_chunk(bc.root());
 			std::ofstream outfile(oss.str(), std::ios::binary);
 			bc.to_file(outfile);
 			outfile.close();
@@ -123,7 +125,7 @@ void SingleGame::setup_gameloop() {
 		}
 	}
 	
-	cout << gen->get_height(ivec3(0,0,0)) << endl;
+	cout << gen.get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();
@@ -146,8 +148,6 @@ void SingleGame::setup_gameloop() {
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
-	
-	plugdelete(gen);
 }
 
 void SingleGame::timestep() {

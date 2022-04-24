@@ -146,26 +146,26 @@ struct RequirePlugin {
 	} \
 	PluginDef<X>* X::selected_plugin = nullptr;
 
-#define DEFINE_PLUGIN_TEMPLATE(X) public: \
-	static_assert(std::is_same<X,X::Plugin_BaseType>::value, \
+#define DEFINE_PLUGIN_TEMPLATE(...) public: \
+	static_assert(std::is_same<__VA_ARGS__,__VA_ARGS__::Plugin_BaseType>::value, \
 		"Only base plugins (defined with the macro BASE_PLUGIN_HEAD in the class definition) " \
 		"can be used with the DEFINE_PLUGIN macro"); \
 	template <> \
-	PluginDef<X>* X::plugindef() { \
-		static PluginDef<X> plugdef (PluginId(#X)); \
+	PluginDef<__VA_ARGS__>* __VA_ARGS__::plugindef() { \
+		static PluginDef<__VA_ARGS__> plugdef (PluginId(#__VA_ARGS__)); \
 		return &plugdef; \
 	} \
 	template <> \
-	PluginDef<X>* X::selected_plugin = nullptr;
+	PluginDef<__VA_ARGS__>* __VA_ARGS__::selected_plugin = nullptr;
 
 
 #define DEFINE_AND_EXPORT_PLUGIN(X) \
 	DEFINE_PLUGIN(X); \
 	static ExportPlugin<X> UNIQUENAME(_export_plugin_);
 
-#define DEFINE_AND_EXPORT_PLUGIN_TEMPLATE(X) \
-	DEFINE_PLUGIN_TEMPLATE(X); \
-	static ExportPlugin<X> UNIQUENAME(_export_plugin_);
+#define DEFINE_AND_EXPORT_PLUGIN_TEMPLATE(...) \
+	DEFINE_PLUGIN_TEMPLATE(__VA_ARGS__); \
+	static ExportPlugin<__VA_ARGS__> UNIQUENAME(_export_plugin_);
 
 
 #define EXPORT_PLUGIN(X) \
@@ -178,16 +178,16 @@ struct RequirePlugin {
 	} \
 	static ExportPlugin<X> UNIQUENAME(_export_plugin_);
 
-#define EXPORT_PLUGIN_TEMPLATE(X) \
-	static_assert(!std::is_same<X,X::Plugin_BaseType>::value, \
+#define EXPORT_PLUGIN_TEMPLATE(...) \
+	static_assert(!std::is_same<__VA_ARGS__,__VA_ARGS__::Plugin_BaseType>::value, \
 		"Only non base plugins can be used with the EXPORT_PLUGIN macro. " \
 		"If you are trying to export a base plugin, use the DEFINE_AND_EXPORT_PLUGIN macro"); \
 	template <> \
-	PluginDef<X::Plugin_BaseType>* X::plugindef() { \
-		static PluginDef<X::Plugin_BaseType> plugdef (PluginId(#X), X::Plugin_ParentType::plugindef()); \
+	PluginDef<__VA_ARGS__::Plugin_BaseType>* __VA_ARGS__::plugindef() { \
+		static PluginDef<__VA_ARGS__::Plugin_BaseType> plugdef (PluginId(#__VA_ARGS__), __VA_ARGS__::Plugin_ParentType::plugindef()); \
 		return &plugdef; \
 	} \
-	static ExportPlugin<X> UNIQUENAME(_export_plugin_);
+	static ExportPlugin<__VA_ARGS__> UNIQUENAME(_export_plugin_);
 
 
 #define EXPORT_PLUGIN_SINGLETON(X) \
@@ -316,7 +316,21 @@ PluginDef<BaseType>* PluginDef<BaseType>::find_deepest() {
 
 
 
+template <typename T, typename ... Params>
+void allplugnew(vector<T*>& vec, Params ... params) {
+	allplugnew(vec, T::plugindef(), params...);
+}
 
+template <typename T, typename ... Params>
+void allplugnew(vector<T*>& vec, PluginDef<T>* def, Params ... params) {
+	while (def != nullptr) {
+		if (def->newfunc != nullptr) {
+			vec.push_back(def->newfunc(params...));
+		}
+		allplugnew(vec, def->children, params...);
+		def = def->next;
+	}
+}
 
 
 
