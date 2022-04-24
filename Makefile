@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC 
+CXXFLAGS := -std=c++17 -DGLEW_STATIC -I ./ -fPIC
 LDFLAGS :=
 DLLFLAGS :=
 
@@ -22,7 +22,11 @@ endif
 ifeq ($(BUILD),RELEASE)
 OPT := -O3
 else
+ifeq ($(BUILD),PROFILE)
+OPT := -O3 -g
+else
 OPT := -g -DSCROLLS_DEBUG
+endif
 endif
 
 

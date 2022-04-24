@@ -18,7 +18,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 512;
+const int worldsize = 256;
 
 const int renderdistance = 2;
 const int chunks = 8;
@@ -100,13 +100,16 @@ void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
 		}
 	}
 }
-
+#include <valgrind/callgrind.h>
 void SingleGame::setup_gameloop() {
 	
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
 	TerrainGenerator gen (12345);
+  
+  CALLGRIND_START_INSTRUMENTATION;
+  CALLGRIND_TOGGLE_COLLECT;
   
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
@@ -124,7 +127,10 @@ void SingleGame::setup_gameloop() {
 			bc.from_file(t);
 		}
 	}
-	
+  
+  CALLGRIND_TOGGLE_COLLECT;
+  CALLGRIND_STOP_INSTRUMENTATION;
+  
 	cout << gen.get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
