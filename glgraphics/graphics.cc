@@ -24,8 +24,6 @@ void GLRenderBuf::set_buffers(GLuint verts, GLuint databuf, int start_size) {
 int GLRenderBuf::add(const RenderData& data) {
 	int pos;
 	{
-		cout << __LINE__ << endl;
-
 		std::lock_guard guard(lock);
 		if (empties.size() > 0) {
 			pos = empties.back();
@@ -39,14 +37,13 @@ int GLRenderBuf::add(const RenderData& data) {
 }
 
 void GLRenderBuf::edit(int index, const RenderData& data) {
-		cout << __LINE__ << endl;
+ 
 
 	std::lock_guard guard(lock);
 	changes[index] = data;
 }
 
 void GLRenderBuf::del(int index) {
-	cout << __LINE__ << endl;
 	{
 		std::lock_guard guard(lock);
 		empties.push_back(index);
@@ -55,7 +52,6 @@ void GLRenderBuf::del(int index) {
 }
 
 void GLRenderBuf::sync() {
-	cout << __LINE__ << endl;
 	lock.lock();
 	for (std::pair<int,RenderData> change : changes) {
 		glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
@@ -260,19 +256,17 @@ void GLGraphics::block_draw_call() {
 }
 
 void GLGraphics::swap() {
-	cout << __LINE__ << endl;
 
 
 	blockbuf->sync();
-	((GLRenderBuf*) blockbuf)->lock.lock();
-	cout << __LINE__ << endl;
+	// ((GLRenderBuf*) blockbuf)->lock.lock();
 
 	
 	block_draw_call();
-		cout << __LINE__ << endl;
+ 
 
 	glfwSwapBuffers(window);
-	((GLRenderBuf*) blockbuf)->lock.unlock();
+	// ((GLRenderBuf*) blockbuf)->lock.unlock();
 
 	glfwPollEvents();
 }
