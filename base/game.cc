@@ -22,9 +22,9 @@ EXPORT_PLUGIN(SingleGame);
 const int worldsize = 32;
 
 const int renderdistance = 32; 
-const int chunks = 27;
+const int chunks = 4913;
 
-int chunkloadingstart = 1;
+int chunkloadingstart = 8;
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
