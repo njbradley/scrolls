@@ -354,7 +354,7 @@ inline bool NodeView::isvalid() const {
 }
 
 inline bool NodeView::hasblock() const {
-	return node->block != nullptr;
+	return !continues() and node->block != nullptr;
 }
 
 inline bool NodeView::continues() const {

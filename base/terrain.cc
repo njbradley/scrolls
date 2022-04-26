@@ -120,6 +120,8 @@ TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
 		total_deriv += shape->max_deriv;
 	}
 	
+	allplugnew(decorators, seed);
+	
 	// // testing shapes
 	// for (TerrainShape* shape : shapes) {
 	// 	float calc_max = 0;
@@ -139,6 +141,15 @@ TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
 	// }
 }
 
+TerrainGenerator::~TerrainGenerator() {
+	for (TerrainShape* shape : shapes) {
+		plugdelete(shape);
+	}
+	for (TerrainDecorator* decor : decorators) {
+		plugdelete(decor);
+	}
+}
+
 enum TerrainValue {
 	TERRAIN_AIR = 0,
 	TERRAIN_FILL = 1,
@@ -146,7 +157,13 @@ enum TerrainValue {
 };
 
 void TerrainGenerator::generate_chunk(NodeView node) {
-	cout << "result " << node.globalpos << ' ' << gen_node(node) << endl;
+	double start = getTime();
+	gen_node(node);
+	double mid = getTime();
+	for (TerrainDecorator* decor : decorators) {
+		decor->decorate_chunk(node);
+	}
+	cout << "Decorate time: " << getTime() - mid << "  gen time: " << mid - start << endl;
 }
 
 int TerrainGenerator::gen_node(NodeView node) {
@@ -166,13 +183,6 @@ int TerrainGenerator::gen_node(NodeView node) {
 		}
 		cur_val += shape->gen_value(val_pos);
 		max_val -= shape->max_val;
-		// max_deriv -= shape->max_deriv;
-		
-		// if (std::abs(cur_val) > max_val or std::abs(cur_val) > max_deriv * val_scale) {
-		// 	// cout << "Ending node2 " << node.globalpos << ' ' << cur_val << ' ' << max_val << ' ' << max_deriv << endl;
-		// 	node.set_block(new Block((cur_val < 0) * block_type));
-		// 	return cur_val < 0;
-		// }
 	}
 	
 	if (val_scale < 1 or std::abs(cur_val) > max_deriv * val_scale * 1.5f) {
@@ -272,6 +282,67 @@ EXPORT_PLUGIN_TEMPLATE(Perlin3d<9,18,2>);
 
 
 
+
+
+
+
+
+struct PlainsDecorator : TerrainDecorator {
+	PLUGIN(PlainsDecorator);
+	using TerrainDecorator::TerrainDecorator;
+	
+	void add_grass(NodeView bottom, NodeView top) {
+		if ((bottom.hasblock() and bottom.block()->value == 0) or (top.hasblock() and top.block()->value != 0)) {
+			return;
+		}
+		if (bottom.continues() and top.continues()) {
+			for (int x = 0; x < BDIMS; x ++) {
+				for (int z = 0; z < BDIMS; z ++) {
+					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
+					add_grass(bottom.child(ivec3(x, 1, z)), top.child(ivec3(x, 0, z)));
+					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
+				}
+			}
+		} else if (bottom.continues()) {
+			for (int x = 0; x < BDIMS; x ++) {
+				for (int z = 0; z < BDIMS; z ++) {
+					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
+					add_grass(bottom.child(ivec3(x, 1, z)), top);
+				}
+			}
+		} else if (top.continues()) {
+			for (int x = 0; x < BDIMS; x ++) {
+				for (int z = 0; z < BDIMS; z ++) {
+					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
+					add_grass(bottom, top.child(ivec3(x, 0, z)));
+				}
+			}
+		} else {
+			bottom.block()->value = 2;
+			int start_height = bottom.globalpos.y;
+			while (start_height - bottom.globalpos.y < 3
+					and bottom.moveto(bottom.globalpos - ivec3(0,1,0), 1)
+					and bottom.block()->value != 0
+					and bottom.scale < 8) {
+				if (bottom.block()->value != 2) {
+					bottom.block()->value = 1;
+				}
+			}
+		}
+	}
+	
+	virtual void decorate_chunk(NodeView node) {
+		if (node.continues()) {
+			for (int x = 0; x < BDIMS; x ++) {
+				for (int z = 0; z < BDIMS; z ++) {
+					add_grass(node.child(ivec3(x, 0, z)), node.child(ivec3(x, 1, z)));
+				}
+			}
+		}
+	}
+};
+
+EXPORT_PLUGIN(PlainsDecorator);
 
 
 /*
@@ -582,4 +653,4 @@ public:
 	virtual void decorate_chunk(NodeView node) {}
 };
 
-EXPORT_PLUGIN(NullDecorator);
+// EXPORT_PLUGIN(NullDecorator);

@@ -18,7 +18,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 256;
+const int worldsize = 64;
 
 const int renderdistance = 2;
 const int chunks = 8;

@@ -45,12 +45,13 @@ class TerrainGenerator {
 public:
 	int seed;
 	vector<TerrainShape*> shapes;
+	vector<TerrainDecorator*> decorators;
 	int total_max = 0;
 	int total_deriv = 0;
-	int block_type = 1;
+	int block_type = 3;
 	
 	TerrainGenerator(int seed);
-	virtual ~TerrainGenerator() {}
+	~TerrainGenerator();
 	
 	void generate_chunk(NodeView node);
 	
@@ -59,7 +60,7 @@ public:
 	int get_height(ivec3 pos);
 };
 
-class TerrainDecorator {
+struct TerrainDecorator {
 	BASE_PLUGIN(TerrainDecorator, (int seed));
 public:
 	int seed;
