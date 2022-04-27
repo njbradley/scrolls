@@ -19,7 +19,7 @@ NodeView::NodeView(Node* nnode, ivec3 gpos, int nscale): node(nnode), globalpos(
 }
 
 bool NodeView::step_down(NodeIndex pos) {
-	if (continues()) {
+	if (haschildren()) {
 		node = node->children + pos;
 		scale /= BDIMS;
 		globalpos += scale * ivec3(pos);
@@ -29,7 +29,7 @@ bool NodeView::step_down(NodeIndex pos) {
 }
 
 bool NodeView::step_up() {
-	if (node->parent != nullptr) {
+	if (hasparent()) {
 		globalpos -= ivec3(parentindex()) * scale;
 		scale *= BDIMS;
 		node = node->parent;
@@ -39,7 +39,7 @@ bool NodeView::step_up() {
 }
 
 bool NodeView::step_side(NodeIndex pos) {
-	if (node->parent != nullptr) {
+	if (hasparent()) {
 		globalpos += ivec3(pos) * scale - ivec3(parentindex()) * scale;
 		node = node + (int(pos) - int(parentindex()));
 		return true;
@@ -88,7 +88,7 @@ bool NodeView::moveto(ivec3 pos, int goalscale) {
 
 void NodeView::join() {
 	del_tree(node);
-	node->flags &= ~Block::CONTINUES_FLAG;
+	node->flags &= ~Block::CHILDREN_FLAG;
 	node->block = nullptr;
 	on_change();
 }
@@ -98,13 +98,10 @@ void NodeView::split() {
 	node->children = new Node[BDIMS3];
 	for (int i = 0; i < BDIMS3; i ++) {
 		node->children[i].parent = node;
+		node->children[i].flags |= Block::PARENT_FLAG;
 	}
-	node->flags |= Block::CONTINUES_FLAG;
+	node->flags |= Block::CHILDREN_FLAG;
 	on_change();
-}
-
-bool NodeView::has_flag(uint32 flag) const {
-	return node->flags & flag;
 }
 
 void NodeView::set_flag(uint32 flag) {
@@ -124,14 +121,14 @@ void NodeView::reset_flag(uint32 flag) {
 }
 
 void NodeView::set_block(Block* block) {
-	ASSERT(!continues());
+	ASSERT(!haschildren());
 	if (node->block != nullptr) delete node->block;
 	node->block = block;
 	on_change();
 }
 
 Block* NodeView::swap_block(Block* block) {
-	ASSERT(!continues());
+	ASSERT(!haschildren());
 	Block* old = node->block;
 	node->block = block;
 	return old;
@@ -154,7 +151,7 @@ void NodeView::from_file(istream& ifile) {
 
 void NodeView::to_file(ostream& ofile) {
 	for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
-		if (curnode.continues()) {
+		if (curnode.haschildren()) {
 			ofile.put('{');
 		} else if (hasblock()) {
 			ofile.put(curnode.node->block->value);
@@ -166,7 +163,7 @@ void NodeView::to_file(ostream& ofile) {
 
 void NodeView::copy_tree(Node* src, Node* dest) {
 	*dest = *src;
-	if (src->flags & Block::CONTINUES_FLAG) {
+	if (src->flags & Block::CHILDREN_FLAG) {
 		dest->children = new Node[BDIMS3];
 		for (int i = 0; i < BDIMS3; i ++) {
 			dest->children[i].parent = dest;
@@ -184,7 +181,14 @@ void NodeView::copy_tree(NodeView other) {
 }
 
 void NodeView::swap_tree(NodeView other) {
+	bool parent_flag = test_flag(Block::PARENT_FLAG);
+	bool other_parent_flag = test_flag(Block::PARENT_FLAG);
+	reset_flag(Block::PARENT_FLAG);
+	other.reset_flag(Block::PARENT_FLAG);
 	std::swap(*node, *other.node);
+	std::swap(node->parent, other.node->parent);
+	if (parent_flag) set_flag(Block::PARENT_FLAG);
+	if (other_parent_flag) other.set_flag(Block::PARENT_FLAG);
 	on_change();
 }
 
@@ -193,7 +197,7 @@ void NodeView::on_change() {
 }
 
 void NodeView::del_tree(Node* node) {
-	if (node->flags & Block::CONTINUES_FLAG) {
+	if (node->flags & Block::CHILDREN_FLAG) {
 		for (int i = 0; i < BDIMS3; i ++) {
 			del_tree(&node->children[i]);
 		}
@@ -218,7 +222,7 @@ BlockView::BlockView() {
 
 BlockView::BlockView(const NodeView& view): NodeView(view) {
 	if (isvalid()) {
-		while (continues()) {
+		while (haschildren()) {
 			step_down(0);
 		}
 		ASSERT(block() != nullptr);
@@ -242,7 +246,7 @@ NodeIter::NodeIter(const NodeView& view): NodeView(view), max_scale(view.scale) 
 
 void NodeIter::step_down() {
 	// cout << "step down " << globalpos << ' ' << scale << endl;
-	if (continues()) {
+	if (haschildren()) {
 		NodeView::step_down(startpos());
 		get_safe();
 	} else {
@@ -252,7 +256,7 @@ void NodeIter::step_down() {
 
 void NodeIter::step_side() {
 	// cout << "step side " << globalpos << ' ' << scale << endl;
-	if (node->parent == nullptr or scale >= max_scale) {
+	if (!hasparent() or scale >= max_scale) {
 		finish();
 	} else if (parentindex() == endpos()) {
 		step_up();
@@ -284,7 +288,7 @@ NodeIter NodeIter::operator++() {
 
 
 BlockContainer::BlockContainer(ivec3 gpos, int nscale): NodeView(new Node(), gpos, nscale) {
-	node->block = nullptr;
+	reset_flag(Block::PARENT_FLAG);
 }
 
 BlockContainer::~BlockContainer() {

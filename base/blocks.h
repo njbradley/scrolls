@@ -66,7 +66,8 @@ struct Block {
 	enum : uint32 {
 		PROPOGATING_FLAGS = 0x0000ffff,
 		RENDER_FLAG = 0x00000001,
-		CONTINUES_FLAG = 0x00010000
+		CHILDREN_FLAG = 0x00010000,
+		PARENT_FLAG = 0x00020000
 	};
 	
 	Block();
@@ -76,7 +77,7 @@ struct Block {
 struct Node {
 	Node* parent = nullptr;
 	union {
-		Node* children;
+		Node* children = nullptr;
 		Block* block;
 	};
 	uint32 flags = 0;
@@ -127,10 +128,11 @@ public:
 	bool isvalid() const;
 	operator bool() const;
 	// whether the node has a block (accessed by block())
-	// hasblock() and continues() cannot both be true
+	// hasblock() and haschildren() cannot both be true
 	bool hasblock() const;
 	// whether the node has children (accesed by child())
-	bool continues() const;
+	bool haschildren() const;
+	bool hasparent() const;
 	
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
@@ -180,7 +182,7 @@ public:
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
 	// block class,
-	bool has_flag(uint32 flag) const;
+	bool test_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
 	
@@ -276,13 +278,13 @@ public:
 	using NodeView::scale;
 	
 	using NodeView::hasblock;
-	using NodeView::continues;
+	using NodeView::haschildren;
 	using NodeView::block;
 	using NodeView::child;
 	using NodeView::get_global;
 	using NodeView::split;
 	using NodeView::join;
-	using NodeView::has_flag;
+	using NodeView::test_flag;
 	using NodeView::set_flag;
 	using NodeView::reset_flag;
 	using NodeView::set_block;
@@ -354,11 +356,20 @@ inline bool NodeView::isvalid() const {
 }
 
 inline bool NodeView::hasblock() const {
-	return !continues() and node->block != nullptr;
+	return !haschildren() and node->block != nullptr;
 }
 
-inline bool NodeView::continues() const {
-	return node->flags & Block::CONTINUES_FLAG;
+inline bool NodeView::haschildren() const {
+	return node->flags & Block::CHILDREN_FLAG;
+}
+
+inline bool NodeView::hasparent() const {
+	// return node->parent != nullptr;
+	return node->flags & Block::PARENT_FLAG;
+}
+
+inline bool NodeView::test_flag(uint32 flag) const {
+	return node->flags & flag;
 }
 
 inline NodeIndex NodeView::parentindex() const {

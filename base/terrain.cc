@@ -295,7 +295,7 @@ struct PlainsDecorator : TerrainDecorator {
 		if ((bottom.hasblock() and bottom.block()->value == 0) or (top.hasblock() and top.block()->value != 0)) {
 			return;
 		}
-		if (bottom.continues() and top.continues()) {
+		if (bottom.haschildren() and top.haschildren()) {
 			for (int x = 0; x < BDIMS; x ++) {
 				for (int z = 0; z < BDIMS; z ++) {
 					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
@@ -303,14 +303,14 @@ struct PlainsDecorator : TerrainDecorator {
 					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
 				}
 			}
-		} else if (bottom.continues()) {
+		} else if (bottom.haschildren()) {
 			for (int x = 0; x < BDIMS; x ++) {
 				for (int z = 0; z < BDIMS; z ++) {
 					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
 					add_grass(bottom.child(ivec3(x, 1, z)), top);
 				}
 			}
-		} else if (top.continues()) {
+		} else if (top.haschildren()) {
 			for (int x = 0; x < BDIMS; x ++) {
 				for (int z = 0; z < BDIMS; z ++) {
 					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
@@ -332,7 +332,7 @@ struct PlainsDecorator : TerrainDecorator {
 	}
 	
 	virtual void decorate_chunk(NodeView node) {
-		if (node.continues()) {
+		if (node.haschildren()) {
 			for (int x = 0; x < BDIMS; x ++) {
 				for (int z = 0; z < BDIMS; z ++) {
 					add_grass(node.child(ivec3(x, 0, z)), node.child(ivec3(x, 1, z)));
