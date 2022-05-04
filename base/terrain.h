@@ -41,13 +41,24 @@ float perlin2d(vec2 pos, int seed, int layer);
 float fractal_perlin2d(vec2 pos, float scale, float divider, int seed, int layer);
 float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer);
 
+struct Biome {
+	string name;
+	vec3 values;
+	float dist;
+};
+
+struct BiomeHash {
+	size_t operator()(const Biome& biome) {
+		return std::hash<string>()(biome.name);
+	}
+};
+
 class TerrainGenerator {
 public:
 	int seed;
-	vector<TerrainShape*> shapes;
+	vector<TerrainShape*> allshapes;
 	vector<TerrainDecorator*> decorators;
-	int total_max = 0;
-	int total_deriv = 0;
+	vector<Biome*> biomes;
 	int block_type = 3;
 	
 	TerrainGenerator(int seed);
@@ -58,6 +69,8 @@ public:
 	int gen_node(NodeView node);
 	
 	int get_height(ivec3 pos);
+	
+	void get_shapes(NodeView node, vector<TerrainShape*>* shapes);
 };
 
 struct TerrainDecorator {
@@ -80,9 +93,21 @@ public:
 	
 	TerrainShape(int nseed): seed(nseed) {}
 	
+	virtual bool is_active(vec3 pos) = 0;
 	virtual float gen_value(vec3 pos) = 0;
 };
+
+
+template <typename Shape, Biome& tbiome>
+struct BiomeShape : Shape {
+	PLUGIN_TEMPLATE(typename Shape, BiomeShape<Shape,tbiome>);
 	
+	BiomeShape(int nseed): Shape(nseed) {}
+	
+	virtual float gen_value(vec3 pos);
+	virtual bool is_active(vec3 pos);
+	vec3 gen_biome_values(vec3 pos);
+};
 
 // These are the methods that terrain shapes must implement
 //

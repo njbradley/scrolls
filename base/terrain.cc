@@ -112,13 +112,14 @@ bool shapesorter(TerrainShape* shape1, TerrainShape* shape2) {
 }
 
 TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
-	allplugnew(shapes, seed);
+	allplugnew(allshapes, seed);
 	
-	std::sort(shapes.begin(), shapes.end(), shapesorter);
-	for (TerrainShape* shape : shapes) {
-		total_max += shape->max_val;
-		total_deriv += shape->max_deriv;
-	}
+	std::sort(allshapes.begin(), allshapes.end(), shapesorter);
+	// for (TerrainShape* shape : allshapes) {
+	// 	if (std::find(biomes.begin(), biomes.end(), shape->biome) == biomes.end()) {
+	// 		biomes.push_back(shape->biome);
+	// 	}
+	// }
 	
 	allplugnew(decorators, seed);
 	
@@ -142,7 +143,7 @@ TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
 }
 
 TerrainGenerator::~TerrainGenerator() {
-	for (TerrainShape* shape : shapes) {
+	for (TerrainShape* shape : allshapes) {
 		plugdelete(shape);
 	}
 	for (TerrainDecorator* decor : decorators) {
@@ -158,6 +159,7 @@ enum TerrainValue {
 
 void TerrainGenerator::generate_chunk(NodeView node) {
 	double start = getTime();
+	
 	gen_node(node);
 	double mid = getTime();
 	for (TerrainDecorator* decor : decorators) {
@@ -170,10 +172,25 @@ int TerrainGenerator::gen_node(NodeView node) {
 	float val_scale = float(node.scale)/2;
 	vec3 val_pos = vec3(node.globalpos) + val_scale;
 	float cur_val = val_pos.y + 16;
+	
+	bool active_shapes[allshapes.size()];
+	
+	int total_max = 0;
+	int total_deriv = 0;
+	for (int i = 0; i < allshapes.size(); i ++) {
+		active_shapes[i] = allshapes[i]->is_active(val_pos);
+		if (active_shapes[i]) {
+			total_max += allshapes[i]->max_val;
+			total_deriv += allshapes[i]->max_deriv;
+		}
+	}
+	
 	float max_val = total_max + val_scale;
 	float max_deriv = total_deriv + 1;
 	
-	for (TerrainShape* shape : shapes) {
+	for (int i = 0; i < allshapes.size(); i ++) {
+		if (!active_shapes[i]) continue;
+		
 		if (std::abs(cur_val) - max_val > max_deriv * val_scale * 1.5f) {
 			node.set_block(new Block((cur_val < 0) * block_type));
 			return cur_val < 0;
@@ -181,8 +198,8 @@ int TerrainGenerator::gen_node(NodeView node) {
 		if (std::abs(cur_val) + max_val < max_deriv * val_scale * 1.5f) {
 			break;
 		}
-		cur_val += shape->gen_value(val_pos);
-		max_val -= shape->max_val;
+		cur_val += allshapes[i]->gen_value(val_pos);
+		max_val -= allshapes[i]->max_val;
 	}
 	
 	if (val_scale < 1 or std::abs(cur_val) > max_deriv * val_scale * 1.5f) {
@@ -210,6 +227,15 @@ int TerrainGenerator::get_height(ivec3 pos) {
 	return 0;
 }
 
+void TerrainGenerator::get_shapes(NodeView node, vector<TerrainShape*>* shapes) {
+	vec3 pos = vec3(node.globalpos) - node.scale/2.0f;
+	
+	for (TerrainShape* shape : allshapes) {
+		if (shape->is_active(pos)) {
+			shapes->push_back(shape);
+		}
+	}
+}
 
 
 
@@ -227,7 +253,29 @@ DEFINE_PLUGIN(TerrainShape);
 
 
 
+template <typename Shape, Biome& biome>
+vec3 BiomeShape<Shape,biome>::gen_biome_values(vec3 pos) {
+	return vec3(
+		perlin3d(pos / 64.0f, this->seed, 44546) * 2.0f * 1.15f,
+		perlin3d(pos / 64.0f, this->seed, 44547) * 2.0f * 1.15f,
+		perlin3d(pos / 64.0f, this->seed, 44548) * 2.0f * 1.15f
+	);
+}
 
+template <typename Shape, Biome& biome>
+bool BiomeShape<Shape,biome>::is_active(vec3 pos) {
+	return glm::length(biome.values - gen_biome_values(pos)) <= biome.dist;
+}
+
+template <typename Shape, Biome& biome>
+float BiomeShape<Shape,biome>::gen_value(vec3 pos) {
+	float scalar = (biome.dist - glm::length(biome.values - gen_biome_values(pos))) / biome.dist;
+	if (scalar <= 0) {
+		return 0;
+	}
+	
+	return Shape::gen_value(pos) * scalar;
+}
 
 
 
@@ -236,7 +284,6 @@ DEFINE_PLUGIN(TerrainShape);
 
 template <int scale, int height, int layer>
 struct Perlin2d : TerrainShape {
-	PLUGIN(Perlin2d);
 	Perlin2d(int seed): TerrainShape(seed) {
 		max_deriv = 1.45f * height / scale;
 		max_val = height / 2.0f;
@@ -249,7 +296,6 @@ struct Perlin2d : TerrainShape {
 
 template <int scale, int height, int layer>
 struct Perlin3d : TerrainShape {
-	PLUGIN(Perlin3d);
 	Perlin3d(int seed): TerrainShape(seed) {
 		max_deriv = 1.15f * height / scale;
 		max_val = height / 2.0f;
@@ -269,14 +315,15 @@ struct Perlin3d : TerrainShape {
 // 	}
 // };
 
+Biome plains {"plains", vec3(-1,-1,-1), 10};
+Biome mountains {"mountains", vec3(1,1,1), 10};
+
 using Layer1 = Perlin2d<512,256,0>;
-EXPORT_PLUGIN_TEMPLATE(Perlin2d<512,256,0>);
-
-using Layer2 = Perlin3d<32,64,1>;
-EXPORT_PLUGIN_TEMPLATE(Perlin3d<32,64,1>);
-
-using Layer3 = Perlin3d<9,18,2>;
-EXPORT_PLUGIN_TEMPLATE(Perlin3d<9,18,2>);
+EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin2d<512,2,0>, mountains>);
+EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin2d<512,256,0>, plains>);
+EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<32,64,1>, plains>);
+EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<9,18,2>, plains>);
+EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<5,3,3>, plains>);
 
 // HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;
 

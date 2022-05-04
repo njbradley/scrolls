@@ -234,6 +234,11 @@ The parameters are:
 	typedef X Plugin_Type; \
 	virtual PluginDef<Plugin_BaseType>* get_plugindef() const { return plugindef(); }
 
+#define PLUGIN_TEMPLATE(PARENT, X...) public: \
+	static PluginDef<PARENT::Plugin_BaseType>* plugindef(); \
+	typedef PARENT::Plugin_Type Plugin_ParentType; \
+	typedef X Plugin_Type; \
+	virtual PluginDef<PARENT::Plugin_BaseType>* get_plugindef() const { return plugindef(); }
 
 
 #define REQUIRE_PLUGIN(oldname, newname, NewType) \
