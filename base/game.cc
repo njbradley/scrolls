@@ -106,7 +106,7 @@ void SingleGame::setup_gameloop() {
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
-	TerrainGenerator gen (12345);
+	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
   
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
@@ -115,7 +115,7 @@ void SingleGame::setup_gameloop() {
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
 		if (stat(oss.str().c_str(), &buf) != 0 or overwrite_saves) {
-			gen.generate_chunk(bc.root());
+			gen->generate_chunk(bc.root());
 			std::ofstream outfile(oss.str(), std::ios::binary);
 			bc.to_file(outfile);
 			outfile.close();
@@ -125,7 +125,6 @@ void SingleGame::setup_gameloop() {
 		}
 	}
   
-	cout << gen.get_height(ivec3(0,0,0)) << endl;
 	cout << getTime() - start << " Time terrain " << endl;
 	
 	start = getTime();

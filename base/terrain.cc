@@ -22,10 +22,6 @@ float randfloat(int seed, int a, int b, int c, int d) {
   return (float)(hash4(seed,a,b,c,d)%1000000) / 1000000;
 }
 
-ivec3 randivec3(int seed, int a, int b, int c, int d) {
-  return ivec3(hash4(seed, a, b, c, d*3), hash4(seed, a, b, c, d*3+1), hash4(seed, a, b, c, d*3+2));
-}
-
 vec3 randvec3(int seed, int a, int b, int c, int d) {
   return vec3(randfloat(seed, a, b, c, d*3), randfloat(seed, a, b, c, d*3+1), randfloat(seed, a, b, c, d*3+2));
 }
@@ -107,134 +103,10 @@ float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer
 }
 
 
-bool shapesorter(TerrainShape* shape1, TerrainShape* shape2) {
-	return shape1->max_val > shape2->max_val;
-}
+DEFINE_PLUGIN(TerrainGenerator);
 
 TerrainGenerator::TerrainGenerator(int newseed): seed(newseed) {
-	allplugnew(allshapes, seed);
 	
-	std::sort(allshapes.begin(), allshapes.end(), shapesorter);
-	// for (TerrainShape* shape : allshapes) {
-	// 	if (std::find(biomes.begin(), biomes.end(), shape->biome) == biomes.end()) {
-	// 		biomes.push_back(shape->biome);
-	// 	}
-	// }
-	
-	allplugnew(decorators, seed);
-	
-	// // testing shapes
-	// for (TerrainShape* shape : shapes) {
-	// 	float calc_max = 0;
-	// 	float calc_deriv = 0;
-	//
-	// 	for (int i = 0; i < 10000000; i ++) {
-	// 		vec3 pos = randivec3(seed, i, 0, 0, 0)%1000000;
-	// 		int change_dist = hash4(seed, i, i, i, 0) % 64;
-	// 		float val1 = shape->gen_value(pos);
-	// 		float val2 = shape->gen_value(pos + glm::normalize(randvec3(seed, i, i, 0, 0)) * float(change_dist));
-	// 		calc_max = std::max(calc_max, std::max(std::abs(val1), std::abs(val2)));
-	// 		calc_deriv = std::max(calc_deriv, std::abs(val1 - val2) / change_dist);
-	// 	}
-	//
-	// 	cout << "Checked shape " << shape->get_plugindef()->id << " max: " << calc_max << " / " << shape->max_val
-	// 	<< " deriv: " << calc_deriv << " / " << shape->max_deriv << endl;
-	// }
-}
-
-TerrainGenerator::~TerrainGenerator() {
-	for (TerrainShape* shape : allshapes) {
-		plugdelete(shape);
-	}
-	for (TerrainDecorator* decor : decorators) {
-		plugdelete(decor);
-	}
-}
-
-enum TerrainValue {
-	TERRAIN_AIR = 0,
-	TERRAIN_FILL = 1,
-	TERRAIN_SPLIT = -1
-};
-
-void TerrainGenerator::generate_chunk(NodeView node) {
-	double start = getTime();
-	
-	gen_node(node);
-	double mid = getTime();
-	for (TerrainDecorator* decor : decorators) {
-		decor->decorate_chunk(node);
-	}
-	cout << "Decorate time: " << getTime() - mid << "  gen time: " << mid - start << endl;
-}
-
-int TerrainGenerator::gen_node(NodeView node) {
-	float val_scale = float(node.scale)/2;
-	vec3 val_pos = vec3(node.globalpos) + val_scale;
-	float cur_val = val_pos.y + 16;
-	
-	bool active_shapes[allshapes.size()];
-	
-	int total_max = 0;
-	int total_deriv = 0;
-	for (int i = 0; i < allshapes.size(); i ++) {
-		active_shapes[i] = allshapes[i]->is_active(val_pos);
-		if (active_shapes[i]) {
-			total_max += allshapes[i]->max_val;
-			total_deriv += allshapes[i]->max_deriv;
-		}
-	}
-	
-	float max_val = total_max + val_scale;
-	float max_deriv = total_deriv + 1;
-	
-	for (int i = 0; i < allshapes.size(); i ++) {
-		if (!active_shapes[i]) continue;
-		
-		if (std::abs(cur_val) - max_val > max_deriv * val_scale * 1.5f) {
-			node.set_block(new Block((cur_val < 0) * block_type));
-			return cur_val < 0;
-		}
-		if (std::abs(cur_val) + max_val < max_deriv * val_scale * 1.5f) {
-			break;
-		}
-		cur_val += allshapes[i]->gen_value(val_pos);
-		max_val -= allshapes[i]->max_val;
-	}
-	
-	if (val_scale < 1 or std::abs(cur_val) > max_deriv * val_scale * 1.5f) {
-		node.set_block(new Block((cur_val < 0) * block_type));
-		return cur_val < 0;
-	}
-	
-	node.split();
-	int total_result = gen_node(node.child(0));
-	for (int i = 1; i < BDIMS3; i ++) {
-		int result = gen_node(node.child(i));
-		total_result = (result != total_result) ? TERRAIN_SPLIT : result;
-	}
-	if (total_result != TERRAIN_SPLIT) {
-		node.join();
-		node.set_block(new Block(total_result * block_type));
-		return total_result;
-	}
-	return TERRAIN_SPLIT;
-}
-
-
-
-int TerrainGenerator::get_height(ivec3 pos) {
-	return 0;
-}
-
-void TerrainGenerator::get_shapes(NodeView node, vector<TerrainShape*>* shapes) {
-	vec3 pos = vec3(node.globalpos) - node.scale/2.0f;
-	
-	for (TerrainShape* shape : allshapes) {
-		if (shape->is_active(pos)) {
-			shapes->push_back(shape);
-		}
-	}
 }
 
 
@@ -247,155 +119,23 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 
 
-DEFINE_PLUGIN(TerrainShape);
 
 
 
 
 
-template <typename Shape, Biome& biome>
-vec3 BiomeShape<Shape,biome>::gen_biome_values(vec3 pos) {
-	return vec3(
-		perlin3d(pos / 64.0f, this->seed, 44546) * 2.0f * 1.15f,
-		perlin3d(pos / 64.0f, this->seed, 44547) * 2.0f * 1.15f,
-		perlin3d(pos / 64.0f, this->seed, 44548) * 2.0f * 1.15f
-	);
+
+
+template <typename ... Shapes>
+ShapeContext ShapeResolver<Shapes...>::get_context(vec3 pos) {
+	ShapeContext context {seed};
+	return context;
 }
 
-template <typename Shape, Biome& biome>
-bool BiomeShape<Shape,biome>::is_active(vec3 pos) {
-	return glm::length(biome.values - gen_biome_values(pos)) <= biome.dist;
-}
-
-template <typename Shape, Biome& biome>
-float BiomeShape<Shape,biome>::gen_value(vec3 pos) {
-	float scalar = (biome.dist - glm::length(biome.values - gen_biome_values(pos))) / biome.dist;
-	if (scalar <= 0) {
-		return 0;
-	}
-	
-	return Shape::gen_value(pos) * scalar;
-}
-
-
-
-
-
-
-template <int scale, int height, int layer>
-struct Perlin2d : TerrainShape {
-	Perlin2d(int seed): TerrainShape(seed) {
-		max_deriv = 1.45f * height / scale;
-		max_val = height / 2.0f;
-	}
-	
-	virtual float gen_value(vec3 pos) {
-		return perlin2d(vec2(pos.x, pos.z) / float(scale), seed, layer) * height * 1.45f;
-	}
-};
-
-template <int scale, int height, int layer>
-struct Perlin3d : TerrainShape {
-	Perlin3d(int seed): TerrainShape(seed) {
-		max_deriv = 1.15f * height / scale;
-		max_val = height / 2.0f;
-	}
-	
-	virtual float gen_value(vec3 pos) {
-		 return perlin3d(pos / float(scale) + randvec3(seed, layer, 143, 211, 566), seed, layer) * height * 1.15f;
-	}
-};
-
-// template <int scale, int layer>
-// struct RidgePerlin3d : Perlin3d<scale, layer> {
-// 	PLUGIN(RidgePerlin3d);
-// 	using Perlin3d<scale, layer>::Perlin3d;
-// 	virtual float gen_value(int seed, vec3 pos) {
-// 		return scale - std::abs(Perlin3d<scale, layer>::gen_value(seed, pos));
-// 	}
-// };
-
-Biome plains {"plains", vec3(-1,-1,-1), 10};
-Biome mountains {"mountains", vec3(1,1,1), 10};
-
-using Layer1 = Perlin2d<512,256,0>;
-EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin2d<512,2,0>, mountains>);
-EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin2d<512,256,0>, plains>);
-EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<32,64,1>, plains>);
-EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<9,18,2>, plains>);
-EXPORT_PLUGIN_TEMPLATE(BiomeShape<Perlin3d<5,3,3>, plains>);
-
-// HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;
-
-
-
-
-
-
-
-
-struct PlainsDecorator : TerrainDecorator {
-	PLUGIN(PlainsDecorator);
-	using TerrainDecorator::TerrainDecorator;
-	
-	void add_grass(NodeView bottom, NodeView top) {
-		if ((bottom.hasblock() and bottom.block()->value == 0) or (top.hasblock() and top.block()->value != 0)) {
-			return;
-		}
-		if (bottom.haschildren() and top.haschildren()) {
-			for (int x = 0; x < BDIMS; x ++) {
-				for (int z = 0; z < BDIMS; z ++) {
-					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
-					add_grass(bottom.child(ivec3(x, 1, z)), top.child(ivec3(x, 0, z)));
-					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
-				}
-			}
-		} else if (bottom.haschildren()) {
-			for (int x = 0; x < BDIMS; x ++) {
-				for (int z = 0; z < BDIMS; z ++) {
-					add_grass(bottom.child(ivec3(x, 0, z)), bottom.child(ivec3(x, 1, z)));
-					add_grass(bottom.child(ivec3(x, 1, z)), top);
-				}
-			}
-		} else if (top.haschildren()) {
-			for (int x = 0; x < BDIMS; x ++) {
-				for (int z = 0; z < BDIMS; z ++) {
-					add_grass(top.child(ivec3(x, 0, z)), top.child(ivec3(x, 1, z)));
-					add_grass(bottom, top.child(ivec3(x, 0, z)));
-				}
-			}
-		} else {
-			bottom.block()->value = 2;
-			int start_height = bottom.globalpos.y;
-			while (start_height - bottom.globalpos.y < 3
-					and bottom.moveto(bottom.globalpos - ivec3(0,1,0), 1)
-					and bottom.block()->value != 0
-					and bottom.scale < 8) {
-				if (bottom.block()->value != 2) {
-					bottom.block()->value = 1;
-				}
-			}
-		}
-	}
-	
-	virtual void decorate_chunk(NodeView node) {
-		if (node.haschildren()) {
-			for (int x = 0; x < BDIMS; x ++) {
-				for (int z = 0; z < BDIMS; z ++) {
-					add_grass(node.child(ivec3(x, 0, z)), node.child(ivec3(x, 1, z)));
-				}
-			}
-		}
-	}
-};
-
-EXPORT_PLUGIN(PlainsDecorator);
-
-
-/*
 template <typename ... Shapes>
 float ShapeResolver<Shapes...>::get_max_value(vec3 pos) {
-	float vals[sizeof...(Shapes)] = {Shapes::gen_value(seed, pos)...};
+	ShapeContext context = get_context(pos);
+	float vals[sizeof...(Shapes)] = {Shapes::gen_value(&context, pos)...};
 	return *std::max_element(vals, vals+sizeof...(Shapes));
 }
 
@@ -407,8 +147,8 @@ float ShapeResolver<Shapes...>::get_max_deriv() {
 
 template <typename ... Shapes>
 template <typename Shape>
-Blocktype ShapeResolver<Shapes...>::gen_func(ivec3 globalpos, int scale) {
-	float val = Shape::gen_value(seed, vec3(globalpos) + float(scale)/2);
+Blocktype ShapeResolver<Shapes...>::gen_func(ShapeContext* ctx, ivec3 globalpos, int scale) {
+	float val = Shape::gen_value(ctx, vec3(globalpos) + float(scale)/2);
 	float level_needed = float(scale-1)/2 * Shape::max_deriv() * 2.1f;
 	if (val >= level_needed) {
 		return Shape::block_val();
@@ -422,10 +162,10 @@ Blocktype ShapeResolver<Shapes...>::gen_func(ivec3 globalpos, int scale) {
 
 template <typename ... Shapes>
 template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
-	Blocktype val = gen_func<FirstShape>(node.globalpos, node.scale);
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node, ShapeContext* ctx) {
+	Blocktype val = gen_func<FirstShape>(ctx, node.globalpos, node.scale);
 	if (val == BLOCK_NULL) {
-		return gen_block<SecondShape,OtherShapes...>(node);
+		return gen_block<SecondShape,OtherShapes...>(node, ctx);
 	} else {
 		return gen_block<FirstShape,SecondShape,OtherShapes...>(node, val);
 	}
@@ -433,14 +173,20 @@ Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
 
 template <typename ... Shapes>
 template <typename Shape>
-Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
-	Blocktype val = gen_func<Shape>(node.globalpos, node.scale);
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node, ShapeContext* ctx) {
+	Blocktype val = gen_func<Shape>(ctx, node.globalpos, node.scale);
 	if (val == BLOCK_NULL) {
 		val = 0;
 	}
 	return gen_block<Shape>(node, val);
 }
 
+template <typename ... Shapes>
+template <typename ... OtherShapes>
+Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
+	ShapeContext context = get_context(vec3(node.globalpos) + float(node.scale)/2);
+	return gen_block<OtherShapes...>(node, &context);
+}
 
 
 template <typename ... Shapes>
@@ -473,7 +219,9 @@ Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node, Blocktype myval) {
 template <typename ... Shapes>
 void ShapeResolver<Shapes...>::generate_chunk(NodeView node) {
 	// std::stringstream ss;
+	double start = getTime();
 	gen_block<Shapes...>(node);
+	cout << getTime() - start << " time " << node.globalpos << endl;
 	// node.from_file(ss);
 }
 
@@ -496,8 +244,10 @@ int ShapeResolver<Shapes...>::get_height(ivec3 pos) {
 
 
 
-
-
+template <int i, typename Other>
+struct OtherShape : public Other {
+	static constexpr int index = i;
+};
 
 template <typename Shape, int value>
 struct SolidType : public Shape {
@@ -508,15 +258,15 @@ struct SolidType : public Shape {
 
 template <typename Shape, int x, int y, int z>
 struct Shift : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos - vec3(x,y,z));
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return Shape::gen_value(ctx, pos - vec3(x,y,z));
 	}
 };
 
 template <typename Shape, int x, int y, int z>
 struct Scale : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos * vec3(x,y,z));
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return Shape::gen_value(ctx, pos * vec3(x,y,z));
 	}
 	
 	static float max_deriv() {
@@ -526,8 +276,8 @@ struct Scale : public Shape {
 
 template <typename ... Shapes>
 struct Add {
-	static float gen_value(int seed, vec3 pos) {
-		return (Shapes::gen_value(seed, pos) + ...);
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return (Shapes::gen_value(ctx, pos) + ...);
 	}
 	
 	static float max_deriv() {
@@ -538,16 +288,16 @@ struct Add {
 template <typename Shape1, int num, int denom = 1>
 struct AddVal : public Shape1 {
 	static constexpr float val = float(num) / denom;
-	static float gen_value(int seed, vec3 pos) {
-		return Shape1::gen_value(seed, pos) + val;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return Shape1::gen_value(ctx, pos) + val;
 	}
 };
 
 template <typename Shape1, int num, int denom = 1>
 struct MulVal : public Shape1 {
 	static constexpr float val = float(num) / denom;
-	static float gen_value(int seed, vec3 pos) {
-		return Shape1::gen_value(seed, pos) * val;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return Shape1::gen_value(ctx, pos) * val;
 	}
 	
 	static float max_deriv() {
@@ -562,8 +312,8 @@ struct MulVal : public Shape1 {
 
 template <typename Shape, int num_falloff, int denom_falloff = 1>
 struct HeightFalloff : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos) - pos.y * num_falloff / denom_falloff;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return Shape::gen_value(ctx, pos) - pos.y * num_falloff / denom_falloff;
 	}
 	
 	static float max_deriv() {
@@ -573,8 +323,8 @@ struct HeightFalloff : public Shape {
 
 template <int scale, int layer>
 struct Perlin2d {
-	static float gen_value(int seed, vec3 pos) {
-		return perlin2d(vec2(pos.x, pos.z) / float(scale), seed, layer) * scale;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return perlin2d(vec2(pos.x, pos.z) / float(scale), ctx->seed, layer) * scale;
 	}
 	
 	static float max_deriv() {
@@ -584,12 +334,12 @@ struct Perlin2d {
 
 template <int max_scale, int divider, int layer>
 struct FractalPerlin2d {
-	static float gen_value(int seed, vec3 pos) {
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
 		float val = 0;
 	  int i = 0;
 		int scale = max_scale;
 	  while (scale > 1) {
-	    val += perlin2d(vec2(pos.x, pos.z) / float(scale), seed, layer*100 + i) * scale;
+	    val += perlin2d(vec2(pos.x, pos.z) / float(scale), ctx->seed, layer*100 + i) * scale;
 	    scale /= divider;
 	    i ++;
 	  }
@@ -604,8 +354,8 @@ struct FractalPerlin2d {
 
 template <int scale, int layer>
 struct Perlin3d {
-	static float gen_value(int seed, vec3 pos) {
-		return perlin3d(pos / float(scale) + randvec3(seed, layer, 143, 211, 566), seed, layer) * scale * 2;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return perlin3d(pos / float(scale) + randvec3(ctx->seed, layer, 143, 211, 566), ctx->seed, layer) * scale * 2;
 	}
 	
 	static float max_deriv() {
@@ -615,13 +365,13 @@ struct Perlin3d {
 
 template <int max_scale, int divider, int layer>
 struct FractalPerlin3d {
-	static float gen_value(int seed, vec3 pos) {
-		// return perlin3d(pos / float(max_scale), seed, layer) * max_scale;
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		// return perlin3d(pos / float(max_scale), ctx->seed, layer) * max_scale;
 		float val = 0;
 	  int i = 0;
 		int scale = max_scale;
 	  while (scale > 1) {
-	    val += perlin3d(pos / float(scale), seed, layer*100 + i) * scale;
+	    val += perlin3d(pos / float(scale), ctx->seed, layer*100 + i) * scale;
 	    scale /= divider;
 	    i ++;
 	  }
@@ -636,8 +386,8 @@ struct FractalPerlin3d {
 
 template <int scale, int layer>
 struct RidgePerlin3d : Perlin3d<scale, layer> {
-	static float gen_value(int seed, vec3 pos) {
-		return scale - std::abs(Perlin3d<scale, layer>::gen_value(seed, pos));
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
+		return scale - std::abs(Perlin3d<scale, layer>::gen_value(ctx, pos));
 	}
 };
 
@@ -650,7 +400,7 @@ struct RidgePerlin3d : Perlin3d<scale, layer> {
 
 template <int height>
 struct FlatTerrain {
-	static float gen_value(int seed, vec3 pos) {
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
 		return height - pos.y;
 	}
 	
@@ -661,7 +411,7 @@ struct FlatTerrain {
 
 template <int height, int slope_numer, int slope_denom = 1>
 struct SlopedTerrain {
-	static float gen_value(int seed, vec3 pos) {
+	static float gen_value(ShapeContext* ctx, vec3 pos) {
 		return height + pos.x * slope_numer / slope_denom - pos.y;
 	}
 	
@@ -685,13 +435,13 @@ using FlatWorld = ShapeResolver<
 using LandLevel = HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;
 
 using TestWorld = ShapeResolver<
-	SolidType<LandLevel, 3>,
-	SolidType<Shift<AddVal<LandLevel, -3>, 0,2,0>, 1>,
-	SolidType<Shift<AddVal<LandLevel, -5>, 0,5,0>, 2>
+	SolidType<LandLevel, 3>//,
+	// SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -3>, 0,2,0>, 1>,
+	// SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -5>, 0,5,0>, 2>
 >;
 EXPORT_PLUGIN_TEMPLATE(TestWorld);
 
-*/
+
 
 class NullDecorator : public TerrainDecorator {
 	PLUGIN(NullDecorator);
@@ -700,4 +450,4 @@ public:
 	virtual void decorate_chunk(NodeView node) {}
 };
 
-// EXPORT_PLUGIN(NullDecorator);
+EXPORT_PLUGIN(NullDecorator);
