@@ -60,6 +60,50 @@ float perlin2d(vec2 pos, int seed, int layer);
 float fractal_perlin2d(vec2 pos, float scale, float divider, int seed, int layer);
 float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer);
 
+struct TerrainValue {
+	float value;
+	float deriv;
+	
+	TerrainValue();
+	TerrainValue(float value, float deriv);
+	
+	TerrainValue operator+(const TerrainValue& other) const;
+	TerrainValue operator-(const TerrainValue& other) const;
+	TerrainValue operator*(const TerrainValue& other) const;
+	TerrainValue operator/(const TerrainValue& other) const;
+	
+	TerrainValue operator+(float val) const;
+	TerrainValue operator-(float val) const;
+	TerrainValue operator*(float val) const;
+	TerrainValue operator/(float val) const;
+};
+
+struct ShapeValue : protected TerrainValue {
+	using TerrainValue::value;
+	using TerrainValue::deriv;
+	Blocktype btype;
+	
+	ShapeValue(const TerrainValue& terrvalue, Blocktype btype);
+	
+	Blocktype blocktype(int scale);
+};
+
+struct TerrainContext {
+	int seed;
+};
+
+using LayerFunc = TerrainValue (*) (TerrainContext* ctx, vec3 pos);
+
+struct ShapeContext : TerrainContext {
+	TerrainValue layers[10];
+	
+	template <LayerFunc ... Layers>
+	void set_layers(vec3 pos);
+};
+
+using ShapeFunc = ShapeValue (*) (ShapeContext* ctx, vec3 pos);
+
+
 class TerrainGenerator {
 	BASE_PLUGIN(TerrainGenerator, (int seed));
 public:
@@ -100,48 +144,52 @@ public:
 // 	static Blocktype block_val();
 // };
 
-struct ShapeContext {
-	int seed;
-	float layers[10];
-	
-	template <typename ... Shapes>
-	void set_layers(vec3 pos);
+template <LayerFunc ... Layers>
+struct LayerResolver {
+	static void set_layers(ShapeContext* context, vec3 pos);
 };
 
-template <typename ... Shapes>
-struct ShapeGroup {
-	
-};
-
-// template <typename ... Layers, typename ... Shapes>
-// struct ShapeResolver<ShapeGroup<Layers...>,ShapeGroup<Shapes...>> : public TerrainGenerator {
-// 	PLUGIN(ShapeResolver<ShapeGroup<Layers...>,ShapeGroup<Shapes...>>);
-
-template <typename ... Shapes>
+template <typename Layers, ShapeFunc ... Shapes>
 struct ShapeResolver : public TerrainGenerator {
-	PLUGIN(ShapeResolver<Shapes...>);
+	PLUGIN(ShapeResolver<Layers,Shapes...>);
 	using TerrainGenerator::TerrainGenerator;
 	
-	float get_max_value(vec3 pos);
-	float get_max_deriv();
-	
-	ShapeContext get_context(vec3 pos);
-	
-	template <typename Shape>
-	Blocktype gen_func(ShapeContext* ctx, ivec3 pos, int scale);
-	
-	template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-	Blocktype gen_block(NodeView node, ShapeContext* ctx);
-	template <typename Shape>
-	Blocktype gen_block(NodeView node, ShapeContext* ctx);
-	template <typename ... OtherShapes>
-	Blocktype gen_block(NodeView node);
-	template <typename ... CurShapes>
-	Blocktype gen_block(NodeView node, Blocktype mytype);
-	
 	virtual void generate_chunk(NodeView node);
+	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes);
+	
 	virtual int get_height(ivec3 pos);
 };
+
+
+
+// template <typename ... Shapes>
+// struct ShapeResolver : public TerrainGenerator {
+// 	PLUGIN(ShapeResolver<Shapes...>);
+// 	using TerrainGenerator::TerrainGenerator;
+//
+// 	float get_max_value(vec3 pos);
+// 	float get_max_deriv();
+//
+// 	ShapeContext get_context(vec3 pos);
+//
+// 	template <typename Shape>
+// 	Blocktype gen_func(ShapeContext* ctx, ivec3 pos, int scale);
+//
+// 	template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
+// 	Blocktype gen_block(NodeView node, ShapeContext* ctx);
+// 	template <typename Shape>
+// 	Blocktype gen_block(NodeView node, ShapeContext* ctx);
+// 	template <typename ... OtherShapes>
+// 	Blocktype gen_block(NodeView node);
+// 	template <typename ... CurShapes>
+// 	Blocktype gen_block(NodeView node, Blocktype mytype);
+//
+// 	virtual void generate_chunk(NodeView node);
+// 	virtual int get_height(ivec3 pos);
+// };
+
+
+
 
 
 
