@@ -18,6 +18,34 @@ int hash4(int seed, ivec2 pos, int c, int d) {
 	return hash4(seed, pos.x, pos.y, c, d);
 }
 
+unsigned char permu_table[] = { 151,160,137,91,90,15,
+	131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
+	190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
+	88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
+	77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
+	102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
+	135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
+	5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
+	223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
+	129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
+	251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
+	49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
+	138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,
+	151,160,137,91,90,15
+};
+
+unsigned char permu(unsigned char val) {
+	return permu_table[val];
+}
+
+int permu4(int seed, int a, int b, int c, int d) {
+	return permu(permu(permu(permu(permu(d) + c) + b) + a) + seed);
+}
+
+int permu4(int seed, ivec3 pos, int d) {
+	return permu4(seed, pos.x, pos.y, pos.z, d);
+}
+
 float randfloat(int seed, int a, int b, int c, int d) {
   return (float)(hash4(seed,a,b,c,d)%1000000) / 1000000;
 }
@@ -30,76 +58,167 @@ vec2 randvec2(int seed, int a, int b, int c, int d) {
   return vec2(randfloat(seed, a, b, c, d*2), randfloat(seed, a, b, c, d*2+1));
 }
 
-double lerp(double a0, double a1, double w) {
-    return (1.0f - w)*a0 + w*a1;
+
+
+
+
+
+
+int fasthash(int seed, int xPrimed, int yPrimed) {
+  int hash = seed ^ xPrimed ^ yPrimed;
+
+  hash *= 0x27d4eb2d;
+  return hash;
 }
 
-float interpolate(float a0, float a1, float w) {
-  //return (a1 - a0) * w + a0;
-  // Use this cubic interpolation [[Smoothstep]] instead, for a smooth appearance:
-  return (a1 - a0) * (3.0f - w * 2.0f) * w * w + a0;
-  
-  // Use [[Smootherstep]] for an even smoother result with a second derivative equal to zero on boundaries:
-  //return (a1 - a0) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a0;
+int fasthash(int seed, int xPrimed, int yPrimed, int zPrimed) {
+  int hash = seed ^ xPrimed ^ yPrimed ^ zPrimed;
+
+  hash *= 0x27d4eb2d;
+  return hash;
 }
 
+float gradient_table3d[] = {
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    1, 1, 0, 0,  0,-1, 1, 0, -1, 1, 0, 0,  0,-1,-1, 0
+};
 
+float gradient_table2d[] = {
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.38268343236509f, 0.923879532511287f, 0.923879532511287f, 0.38268343236509f, 0.923879532511287f, -0.38268343236509f, 0.38268343236509f, -0.923879532511287f,
+    -0.38268343236509f, -0.923879532511287f, -0.923879532511287f, -0.38268343236509f, -0.923879532511287f, 0.38268343236509f, -0.38268343236509f, 0.923879532511287f,
+};
 
-float gridval3d(ivec3 ipos, vec3 pos, int seed, int layer) {
-  vec3 pvec = glm::normalize(randvec3(seed, ipos.x, ipos.y, ipos.z, layer));
-  return glm::dot(pos - vec3(ipos), pvec);
+const int PrimeX = 501125321;
+const int PrimeY = 1136930381;
+const int PrimeZ = 1720413743;
+
+int fastfloor(float f) { return f >= 0 ? (int)f : (int)f - 1; }
+float lerp(float a, float b, float t) { return a + t * (b - a); }
+float interp_hermite(float t) { return t * t * (3 - 2 * t); }
+float interp_quintic(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
+float grad_coord(int seed, int xPrimed, int yPrimed, int zPrimed, float xd, float yd, float zd) {
+  int hash = fasthash(seed, xPrimed, yPrimed, zPrimed);
+  hash ^= hash >> 15;
+  hash &= 63 << 2;
+
+  float xg = gradient_table3d[hash];
+  float yg = gradient_table3d[hash | 1];
+  float zg = gradient_table3d[hash | 2];
+
+  return xd * xg + yd * yg + zd * zg;
 }
 
-float gridval2d(ivec2 ipos, vec2 pos, int seed, int layer) {
-  vec2 pvec = glm::normalize(randvec2(seed, ipos.x, ipos.y, 0, layer));
-  return glm::dot(pos - vec2(ipos), pvec);
+float grad_coord(int seed, int xPrimed, int yPrimed, float xd, float yd) {
+  int hash = fasthash(seed, xPrimed, yPrimed);
+  hash ^= hash >> 15;
+  hash &= 127 << 1;
+
+  float xg = gradient_table2d[hash];
+  float yg = gradient_table2d[hash | 1];
+
+  return xd * xg + yd * yg;
 }
 
+float perlin3d(int seed, float x, float y, float z) {
+  int x0 = fastfloor(x);
+  int y0 = fastfloor(y);
+  int z0 = fastfloor(z);
 
-float perlin3d(vec3 pos, int seed, int layer) {
-  ivec3 ipos = safefloor(pos);
-  vec3 localpos = pos - vec3(ipos);
-  
-  float val11 = interpolate(gridval3d(ipos+ivec3(0,0,0), pos, seed, layer), gridval3d(ipos+ivec3(1,0,0), pos, seed, layer), localpos.x);
-  float val12 = interpolate(gridval3d(ipos+ivec3(0,1,0), pos, seed, layer), gridval3d(ipos+ivec3(1,1,0), pos, seed, layer), localpos.x);
-  float val1 = interpolate(val11, val12, localpos.y);
-  
-  float val21 = interpolate(gridval3d(ipos+ivec3(0,0,1), pos, seed, layer), gridval3d(ipos+ivec3(1,0,1), pos, seed, layer), localpos.x);
-  float val22 = interpolate(gridval3d(ipos+ivec3(0,1,1), pos, seed, layer), gridval3d(ipos+ivec3(1,1,1), pos, seed, layer), localpos.x);
-  float val2 = interpolate(val21, val22, localpos.y);
-  
-  return interpolate(val1, val2, localpos.z);
-}
-  
-float perlin2d(vec2 pos, int seed, int layer) {
-  ivec2 ipos = safefloor(pos);
-  vec2 localpos = pos - vec2(ipos);
-  
-  float val1 = interpolate(gridval2d(ipos, pos, seed, layer), gridval2d(ipos+ivec2(1,0), pos, seed, layer), localpos.x);
-  float val2 = interpolate(gridval2d(ipos+ivec2(0,1), pos, seed, layer), gridval2d(ipos+ivec2(1,1), pos, seed, layer), localpos.x);
-  return interpolate(val1, val2, localpos.y);
-}
+  float xd0 = (float)(x - x0);
+  float yd0 = (float)(y - y0);
+  float zd0 = (float)(z - z0);
+  float xd1 = xd0 - 1;
+  float yd1 = yd0 - 1;
+  float zd1 = zd0 - 1;
 
-float fractal_perlin2d(vec2 pos, float scale, float divider, int seed, int layer) {
-  float val = 0;
-  int i = 0;
-  while (scale > 1) {
-    val += perlin2d(pos / scale, seed, layer*100 + i) * scale;
-    scale /= divider;
-    i ++;
-  }
-  return val;
+  float xs = interp_quintic(xd0);
+  float ys = interp_quintic(yd0);
+  float zs = interp_quintic(zd0);
+
+  x0 *= PrimeX;
+  y0 *= PrimeY;
+  z0 *= PrimeZ;
+  int x1 = x0 + PrimeX;
+  int y1 = y0 + PrimeY;
+  int z1 = z0 + PrimeZ;
+
+  float xf00 = lerp(grad_coord(seed, x0, y0, z0, xd0, yd0, zd0), grad_coord(seed, x1, y0, z0, xd1, yd0, zd0), xs);
+  float xf10 = lerp(grad_coord(seed, x0, y1, z0, xd0, yd1, zd0), grad_coord(seed, x1, y1, z0, xd1, yd1, zd0), xs);
+  float xf01 = lerp(grad_coord(seed, x0, y0, z1, xd0, yd0, zd1), grad_coord(seed, x1, y0, z1, xd1, yd0, zd1), xs);
+  float xf11 = lerp(grad_coord(seed, x0, y1, z1, xd0, yd1, zd1), grad_coord(seed, x1, y1, z1, xd1, yd1, zd1), xs);
+
+  float yf0 = lerp(xf00, xf10, ys);
+  float yf1 = lerp(xf01, xf11, ys);
+
+  return lerp(yf0, yf1, zs) * 0.964921414852142333984375f;
 }
 
-float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer) {
-  float val = 0;
-  int i = 0;
-  while (scale > 1) {
-    val += perlin3d(pos / scale, seed, layer*100 + i) * scale;
-    scale /= divider;
-    i ++;
-  }
-  return val;
+float perlin2d(int seed, float x, float y) {
+  int x0 = fastfloor(x);
+  int y0 = fastfloor(y);
+
+  float xd0 = (float)(x - x0);
+  float yd0 = (float)(y - y0);
+  float xd1 = xd0 - 1;
+  float yd1 = yd0 - 1;
+
+  float xs = interp_quintic(xd0);
+  float ys = interp_quintic(yd0);
+
+  x0 *= PrimeX;
+  y0 *= PrimeY;
+  int x1 = x0 + PrimeX;
+  int y1 = y0 + PrimeY;
+
+  float xf0 = lerp(grad_coord(seed, x0, y0, xd0, yd0), grad_coord(seed, x1, y0, xd1, yd0), xs);
+  float xf1 = lerp(grad_coord(seed, x0, y1, xd0, yd1), grad_coord(seed, x1, y1, xd1, yd1), xs);
+
+  return lerp(xf0, xf1, ys) * 1.4247691104677813f;
 }
 
 
@@ -203,6 +322,20 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 template <typename Layers, ShapeFunc ... Shapes>
 void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
+	
+	// float max_deriv = 0;
+	// for (int i = 0; i < 100000000; i ++) {
+	// 	vec3 pos = randvec3(123435, i, 1, 3, 4) * 100.0f;
+	// 	vec3 dir = randvec3(123456, i, 45, 3, 2) * randfloat(123232, i, 54, 32, 2);
+	// 	float val1 = perlin3d(12345, pos.x, pos.y, pos.z);
+	// 	float val2 = perlin3d(12345, pos.x + dir.x, pos.y + dir.y, pos.z + dir.z);
+	// 	float deriv = std::abs(val1 - val2) / glm::length(dir);
+	// 	if (deriv > max_deriv) {
+	// 		max_deriv = deriv;
+	// 	}
+	// }
+	// cout << max_deriv << " DERIV" << endl;
+	
 	double start = getTime();
 	ShapeFunc shapes[] = {Shapes...};
 	gen_node(node, shapes, sizeof...(Shapes));
@@ -301,10 +434,9 @@ TerrainValue height_falloff(TerrainContext* ctx, vec3 pos) {
 
 template <int scale, int height, int layer>
 TerrainValue perlin2d(TerrainContext* ctx, vec3 pos) {
-	float val = perlin2d(vec2(pos.x, pos.z) / float(scale), ctx->seed, layer) * height;
 	return TerrainValue(
-		val,
-		float(height) / scale
+		perlin2d(ctx->seed + layer, pos.x / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
 	);
 }
 
@@ -314,8 +446,8 @@ TerrainValue perlin2d(TerrainContext* ctx, vec3 pos) {
 template <int scale, int height, int layer>
 TerrainValue perlin3d(TerrainContext* ctx, vec3 pos) {
 	return TerrainValue(
-		perlin3d(pos / float(scale) + randvec3(ctx->seed, layer, 143, 211, 566), ctx->seed, layer) * height,
-		float(height) / scale
+		perlin3d(ctx->seed + layer, pos.x / float(scale), pos.y / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
 	);
 }
 
@@ -359,7 +491,7 @@ TerrainValue shifted_land_level(TerrainContext* ctx, vec3 pos) {
 
 ShapeValue grass_level(ShapeContext* ctx, vec3 pos) {
 	return ShapeValue(
-		ctx->layer(1) - 5,
+		ctx->layer(1) - 4,
 		2
 	);
 }
@@ -379,8 +511,8 @@ EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
 	set_blocktype<3,layer_ref<0>>,
 	// set_blocktype<1,layer_ref<1>>,
 	// set_blocktype<2,layer_ref<2>>
-	grass_level,
-	dirt_level
+	dirt_level,
+	grass_level
 	// set_blocktype<3,land_level>,
 	// set_blocktype<1,shifted_land_level<3>>,
 	// set_blocktype<2,shifted_land_level<5>>
