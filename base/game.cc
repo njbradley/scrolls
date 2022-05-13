@@ -107,6 +107,7 @@ void SingleGame::setup_gameloop() {
 	
 	double start = getTime();
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
+  cout << gen->get_height(ivec3(0,0,0)) << " get_height" << endl;
   
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
@@ -126,7 +127,6 @@ void SingleGame::setup_gameloop() {
 	}
   
 	cout << getTime() - start << " Time terrain " << endl;
-	
 	start = getTime();
   
 	for (BlockContainer& bc : generatedWorld) {

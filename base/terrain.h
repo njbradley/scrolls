@@ -76,6 +76,8 @@ struct TerrainValue {
 	TerrainValue operator-(float val) const;
 	TerrainValue operator*(float val) const;
 	TerrainValue operator/(float val) const;
+	
+	static TerrainValue lerp(const TerrainValue& val1, const TerrainValue& val2, float amount);
 };
 
 struct ShapeValue : protected TerrainValue {
