@@ -90,15 +90,23 @@ struct ShapeValue : protected TerrainValue {
 
 struct TerrainContext {
 	int seed;
+	vec3 sample_pos;
+	
+	TerrainContext(int nseed, vec3 curpos);
 };
 
 using LayerFunc = TerrainValue (*) (TerrainContext* ctx, vec3 pos);
 
+
 struct ShapeContext : TerrainContext {
-	TerrainValue layers[10];
+	static const int num_layers = 10;
 	
-	template <LayerFunc ... Layers>
-	void set_layers(vec3 pos);
+	ShapeContext(int nseed, vec3 curpos, LayerFunc* funcarr, int num_funcs);
+	
+	TerrainValue layer(int index);
+private:
+	LayerFunc layerfuncs[num_layers];
+	TerrainValue layers[num_layers];
 };
 
 using ShapeFunc = ShapeValue (*) (ShapeContext* ctx, vec3 pos);
@@ -146,13 +154,15 @@ public:
 
 template <LayerFunc ... Layers>
 struct LayerResolver {
-	static void set_layers(ShapeContext* context, vec3 pos);
+	LayerFunc layers[sizeof...(Layers)] = {Layers...};
+	int size = sizeof...(Layers);
 };
 
 template <typename Layers, ShapeFunc ... Shapes>
 struct ShapeResolver : public TerrainGenerator {
 	PLUGIN(ShapeResolver<Layers,Shapes...>);
 	using TerrainGenerator::TerrainGenerator;
+	Layers layers;
 	
 	virtual void generate_chunk(NodeView node);
 	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes);

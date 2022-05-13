@@ -153,13 +153,27 @@ Blocktype ShapeValue::blocktype(int scale) {
 
 
 
-
-template<LayerFunc ... Layers>
-void ShapeContext::set_layers(vec3 pos) {
-	TerrainValue vals[sizeof...(Layers)] = {Layers(this, pos)...};
-	std::copy(vals, vals + sizeof...(Layers), layers);
+TerrainContext::TerrainContext(int nseed, vec3 curpos): seed(nseed), sample_pos(curpos) {
+	
 }
 
+
+ShapeContext::ShapeContext(int nseed, vec3 curpos, LayerFunc* funcarr, int num_funcs): TerrainContext(nseed, curpos) {
+	for (int i = 0; i < num_funcs; i ++) {
+		layerfuncs[i] = funcarr[i];
+		layers[i].deriv = -1;
+	}
+}
+
+
+TerrainValue ShapeContext::layer(int index) {
+	if (layers[index].deriv != -1) {
+		return layers[index];
+	} else {
+		layers[index] = layerfuncs[index](this, sample_pos);
+		return layers[index];
+	}
+}
 
 
 
@@ -183,11 +197,6 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 
 
-template <LayerFunc ... Layers>
-void LayerResolver<Layers...>::set_layers(ShapeContext* context, vec3 pos) {
-	context->set_layers<Layers...>(pos);
-};
-	
 
 template <typename Layers, ShapeFunc ... Shapes>
 void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
@@ -203,8 +212,7 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 	vec3 pos = vec3(node.globalpos) + float(node.scale)/2;
 	
 	Blocktype blocktype;
-	ShapeContext context {seed};
-	Layers::set_layers(&context, pos);
+	ShapeContext context (seed, pos, layers.layers, layers.size);
 	int index;
 	for (index = 0; index < num_shapes; index ++) {
 		ShapeValue value = shapes[index](&context, pos);
@@ -602,7 +610,7 @@ TerrainValue sloped_terrain(TerrainContext* ctx, vec3 pos) {
 
 template <int index>
 TerrainValue layer_ref(ShapeContext* ctx, vec3 pos) {
-	return ctx->layers[index];
+	return ctx->layer(index);
 }
 
 
@@ -614,16 +622,45 @@ TerrainValue land_level(TerrainContext* ctx, vec3 pos) {
 		+ perlin3d<32,32,4>(ctx,pos) + perlin2d<512,256,9>(ctx,pos) + height_falloff<1>(ctx,pos);
 }
 
+
+// using TestWorld = ShapeResolver<
+// 	SolidType<LandLevel, 3>//,
+// 	SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -5>, 0,5,0>, 2>
+// 	SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -3>, 0,2,0>, 1>,
+// >;
+
+template <int height>
+TerrainValue shifted_land_level(TerrainContext* ctx, vec3 pos) {
+	return land_level(ctx, pos - vec3(0,height,0));
+}
+
 ShapeValue grass_level(ShapeContext* ctx, vec3 pos) {
-	return ShapeValue(ctx->layers[0] - 5 + pos.y*0.1, 2);
+	return ShapeValue(
+		ctx->layer(1) - 5,
+		2
+	);
+}
+
+ShapeValue dirt_level(ShapeContext* ctx, vec3 pos) {
+	return ShapeValue(
+		(ctx->layer(0) + ctx->layer(1)) / 2 - 2,
+		1
+	);
 }
 
 EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
-	LayerResolver<land_level>,
+	// LayerResolver<>,
+	LayerResolver<land_level, shifted_land_level<5>>,
 	// LayerResolver<flat_terrain<16>>,
 	// LayerResolver<sloped_terrain<16,1,3>>,
 	set_blocktype<3,layer_ref<0>>,
-	grass_level
+	// set_blocktype<1,layer_ref<1>>,
+	// set_blocktype<2,layer_ref<2>>
+	grass_level,
+	dirt_level
+	// set_blocktype<3,land_level>,
+	// set_blocktype<1,shifted_land_level<3>>,
+	// set_blocktype<2,shifted_land_level<5>>
 	// set_blocktype<1,land_level>
 >);
 
