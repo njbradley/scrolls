@@ -4,6 +4,7 @@
 
 #include "shader.h"
 #include "textures.h"
+#include "debug.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -111,7 +112,7 @@ void GLGraphics::init_graphics() {
 	ASSERT_RUN(glewInit() == GLEW_OK);
 	
 	glEnable(GL_DEBUG_OUTPUT);
-	// glDebugMessageCallback(errorCallback, 0);
+	glDebugMessageCallback(errorCallback, 0);
 	
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
@@ -247,6 +248,7 @@ void GLGraphics::block_draw_call() {
 
 void GLGraphics::swap() {
 	block_draw_call();
+  ((GLDebugLines*)debuglines)->draw_call();
 	
 	glfwSwapBuffers(window);
 	glfwPollEvents();

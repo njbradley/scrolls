@@ -4,6 +4,7 @@
 #include "blocks.h"
 #include "blockiter.h"
 #include "terrain.h"
+#include "debug.h"
 
 #include <set>
 #include <sstream>
@@ -18,7 +19,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 128;
+const int worldsize = 32;
 
 const int renderdistance = 2;
 const int chunks = 8;
@@ -69,37 +70,6 @@ SingleGame::~SingleGame() {
 	plugdelete(controls);
 }
 
-void recurse2(NodeView node, std::set<string>& poses) {
-	if (node.haschildren()) {
-		for (int i = 0; i < 8; i ++) {
-			recurse2(node.child(i), poses);
-		}
-	} else {
-		std::stringstream ss;
-		ss << node.globalpos << ' ' << node.scale;
-		if (poses.count(ss.str()) != 0) {
-			cout << "DUP recurse2: " << ss.str() << endl;
-		} else {
-			poses.emplace(ss.str());
-		}
-	}
-}
-
-void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
-	if (node->flags & Block::CHILDREN_FLAG) {
-		for (int i = 0; i < 8; i ++) {
-			recurse(&node->children[i], globalpos + ivec3(NodeIndex(i)) * (scale/2), scale/2, poses);
-		}
-	} else {
-		std::stringstream ss;
-		ss << globalpos << ' ' << scale;
-		if (poses.count(ss.str()) != 0) {
-			cout << "DUP recurse: " << ss.str() << endl;
-		} else {
-			poses.emplace(ss.str());
-		}
-	}
-}
 
 void SingleGame::setup_gameloop() {
 	
@@ -155,6 +125,14 @@ void SingleGame::timestep() {
 	double deltatime = cur_time - last_time;
 	last_time = cur_time;
 	
+  std::stringstream debugstr;
+  debugstr << "FPS: " << 1 / deltatime << endl;
+  debugstr << "spectatorpos: " << spectator.position << endl;
+  debugstr << "abcdefghijklmnopqrstuvwxyz" << endl;
+  debugstr << "1234567890 [({<()>})]" << endl;
+  debuglines->clear();
+  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
+  
 	spectator.timestep(cur_time, deltatime);
 	graphics->viewbox->timestep(cur_time, deltatime);
 	graphics->swap();
