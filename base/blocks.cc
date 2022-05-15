@@ -153,7 +153,7 @@ void NodeView::to_file(ostream& ofile) {
 	for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
 		if (curnode.haschildren()) {
 			ofile.put('{');
-		} else if (hasblock()) {
+		} else if (curnode.hasblock()) {
 			ofile.put(curnode.node->block->value);
 		} else {
 			ofile.put('~');
