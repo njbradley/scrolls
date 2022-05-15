@@ -225,7 +225,7 @@ BlockView::BlockView(const NodeView& view): NodeView(view) {
 		while (haschildren()) {
 			step_down(0);
 		}
-		ASSERT(block() != nullptr);
+		// ASSERT(block() != nullptr);
 	}
 }
 

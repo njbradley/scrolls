@@ -13,19 +13,25 @@
 #include <string>
 #include <thread> 
 #include <sys/types.h>
- #include <sys/stat.h>
+#include <sys/stat.h>
 
 DEFINE_PLUGIN(Game);
 
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 128;
+const int worldsize = 32;
 
-const int renderdistance = 2;
+const int renderdistance = 32;
 const int chunks = 8;
+const int chunkloadingstart = 1;
 
-const bool overwrite_saves = true;
+const bool overwrite_saves = false;
+
+
+// Pool jobPool(4);
+
+
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
@@ -65,6 +71,7 @@ SingleGame::SingleGame() {
 	}
 
 	nick = std::thread(&SingleGame::threadRenderJob, this);
+
 
 }
 
@@ -127,60 +134,25 @@ void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
 		if (stat(oss.str().c_str(), &buf) != 0) {
-			generator->generate_chunk(bc.rootview());
+			cout << "GENERATE" << endl;
+			generator->generate_chunk(bc.root());
 			std::ofstream outfile(oss.str(), std::ios::binary);
-			bc.rootview().to_file(outfile);
+			bc.root().to_file(outfile);
 			outfile.close();
 		} else {
 			std::ifstream t(oss.str().c_str(), std::ios::binary);	
-			bc.rootview().from_file(t);
+			bc.root().from_file(t);
+			// cout << "LOAD " << oss.str().c_str() << endl;
+			
 		}
 }
 
-void recurse2(NodeView node, std::set<string>& poses) {
-	if (node.haschildren()) {
-		for (int i = 0; i < 8; i ++) {
-			recurse2(node.child(i), poses);
-		}
-	} else {
-		std::stringstream ss;
-		ss << node.globalpos << ' ' << node.scale;
-		if (poses.count(ss.str()) != 0) {
-			cout << "DUP recurse2: " << ss.str() << endl;
-		} else {
-			poses.emplace(ss.str());
-		}
-	}
-}
-
-void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
-	if (node->flags & Block::CHILDREN_FLAG) {
-		for (int i = 0; i < 8; i ++) {
-			recurse(&node->children[i], globalpos + ivec3(NodeIndex(i)) * (scale/2), scale/2, poses);
-		}
-	} else {
-		std::stringstream ss;
-		ss << globalpos << ' ' << scale;
-		if (poses.count(ss.str()) != 0) {
-			cout << "DUP recurse: " << ss.str() << endl;
-		} else {
-			poses.emplace(ss.str());
-		}
-	}
-}
 
 void SingleGame::setup_gameloop() {
 	
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
-<<<<<<< HEAD
-	for (BlockContainer& bc : generatedWorld) {
-		loadOrGenerateTerrain(bc);
-	}
-	
-	cout << generator->get_height(ivec3(0,0,0)) << endl;
-=======
 	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
   cout << gen->get_height(ivec3(0,0,0)) << " get_height" << endl;
   
@@ -201,11 +173,11 @@ void SingleGame::setup_gameloop() {
 		}
 	}
   
->>>>>>> master
 	cout << getTime() - start << " Time terrain " << endl;
 	start = getTime();
   
 	for (BlockContainer& bc : generatedWorld) {
+		
 		renderer->render(bc.root(), graphics->blockbuf);
 	}
   
@@ -242,7 +214,7 @@ void SingleGame::threadRenderJob() {
 			}
 
 			if (!continueRendering) {
-				renderer->derender(generatedWorld[i].rootview(), graphics->blockbuf);
+				renderer->derender(generatedWorld[i].root(), graphics->blockbuf);
 				generatedWorld.erase(generatedWorld.begin() + i);
 			}
 		}
@@ -251,8 +223,9 @@ void SingleGame::threadRenderJob() {
 		for (ivec3& pos : chunksInRender) {
 			BlockContainer bc = BlockContainer(pos, worldsize);
 			loadOrGenerateTerrain(bc);
+
 			
-			renderer->render(bc.rootview(), graphics->blockbuf);
+			renderer->render(bc.root(), graphics->blockbuf);
 
 			generatedWorld.push_back(std::move(bc));
 		}
