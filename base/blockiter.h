@@ -19,7 +19,7 @@ class BlockIter : public NodeIter {
 public:
 	using NodeIter::NodeIter;
 protected:
-	virtual bool valid_node() const { return !continues(); }
+	virtual bool valid_node() const { return !haschildren(); }
 };
 
 class DirNodeIter : public NodeIter {
@@ -36,7 +36,7 @@ class DirBlockIter : public DirNodeIter {
 public:
 	using DirNodeIter::DirNodeIter;
 protected:
-	virtual bool valid_node() const { return !continues(); }
+	virtual bool valid_node() const { return !haschildren(); }
 };
 
 
@@ -52,7 +52,7 @@ class FlagBlockIter : public FlagNodeIter {
 public:
 	using FlagNodeIter::FlagNodeIter;
 protected:
-	virtual bool valid_node() const { return !continues(); }
+	virtual bool valid_node() const { return !haschildren(); }
 };
 
 

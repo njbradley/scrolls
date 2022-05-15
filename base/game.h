@@ -9,6 +9,9 @@
 
 #include <thread>
 
+// Game is the main class that runs the whole game
+// setup_gameloop is called on the first frame, then timestep is called repeatedly
+// until playing is false
 class Game {
 	BASE_PLUGIN(Game, ());
 public:
@@ -20,7 +23,7 @@ public:
 	virtual void timestep() = 0;
 };
 
-
+// Game implementation for single player mode
 class SingleGame : public Game {
 	PLUGIN(SingleGame);
 public:

@@ -42,6 +42,8 @@ class GraphicsContext;
 class RenderBuf;
 class Renderer;
 class TerrainGenerator;
+class TerrainDecorator;
+class TerrainShape;
 
 
 

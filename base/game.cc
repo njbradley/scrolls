@@ -20,12 +20,12 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 32;
+const int worldsize = 128;
 
-const int renderdistance = 32; 
-const int chunks = 4913;
+const int renderdistance = 2;
+const int chunks = 8;
 
-int chunkloadingstart = 8;
+const bool overwrite_saves = true;
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
@@ -44,6 +44,7 @@ SingleGame::SingleGame() {
 	for (int i = 0; i < chunks; i++) {
 		cout << "blah: " << i << endl;
 		cout << "x: " << x << " y: " << y << " z: " << z << endl;
+    // generatedWorld.emplace_back(ivec3(x, y, z)*worldsize, worldsize);
 		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
 		if (x == chunkloadingstart) {
 			if (z == chunkloadingstart) {
@@ -137,7 +138,7 @@ void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 }
 
 void recurse2(NodeView node, std::set<string>& poses) {
-	if (node.continues()) {
+	if (node.haschildren()) {
 		for (int i = 0; i < 8; i ++) {
 			recurse2(node.child(i), poses);
 		}
@@ -153,7 +154,7 @@ void recurse2(NodeView node, std::set<string>& poses) {
 }
 
 void recurse(Node* node, ivec3 globalpos, int scale, std::set<string>& poses) {
-	if (node->flags & Block::CONTINUES_FLAG) {
+	if (node->flags & Block::CHILDREN_FLAG) {
 		for (int i = 0; i < 8; i ++) {
 			recurse(&node->children[i], globalpos + ivec3(NodeIndex(i)) * (scale/2), scale/2, poses);
 		}
@@ -173,24 +174,48 @@ void SingleGame::setup_gameloop() {
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
+<<<<<<< HEAD
 	for (BlockContainer& bc : generatedWorld) {
 		loadOrGenerateTerrain(bc);
 	}
 	
 	cout << generator->get_height(ivec3(0,0,0)) << endl;
-	cout << getTime() - start << " Time terrain " << endl;
-	
-	start = getTime();
+=======
+	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
+  cout << gen->get_height(ivec3(0,0,0)) << " get_height" << endl;
+  
 	for (BlockContainer& bc : generatedWorld) {
-		renderer->render(bc.rootview(), graphics->blockbuf);
+		std::ostringstream oss;
+		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
+		struct stat buf;
+		// If the file does not exist, create terrain.
+		// Otherwise, read from file.
+		if (stat(oss.str().c_str(), &buf) != 0 or overwrite_saves) {
+			gen->generate_chunk(bc.root());
+			std::ofstream outfile(oss.str(), std::ios::binary);
+			bc.to_file(outfile);
+			outfile.close();
+		} else {
+			std::ifstream t(oss.str().c_str(), std::ios::binary);
+			bc.from_file(t);
+		}
 	}
+  
+>>>>>>> master
+	cout << getTime() - start << " Time terrain " << endl;
+	start = getTime();
+  
+	for (BlockContainer& bc : generatedWorld) {
+		renderer->render(bc.root(), graphics->blockbuf);
+	}
+  
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
 
 	for (BlockContainer& bc : generatedWorld ) {
-		for (BlockView view : BlockIterable<BlockIter>(bc.rootview())) {
+		for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
 			num ++;
 		}
 	}

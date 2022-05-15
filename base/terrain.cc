@@ -18,6 +18,34 @@ int hash4(int seed, ivec2 pos, int c, int d) {
 	return hash4(seed, pos.x, pos.y, c, d);
 }
 
+unsigned char permu_table[] = { 151,160,137,91,90,15,
+	131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
+	190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
+	88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
+	77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
+	102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
+	135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
+	5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
+	223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
+	129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
+	251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
+	49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
+	138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,
+	151,160,137,91,90,15
+};
+
+unsigned char permu(unsigned char val) {
+	return permu_table[val];
+}
+
+int permu4(int seed, int a, int b, int c, int d) {
+	return permu(permu(permu(permu(permu(d) + c) + b) + a) + seed);
+}
+
+int permu4(int seed, ivec3 pos, int d) {
+	return permu4(seed, pos.x, pos.y, pos.z, d);
+}
+
 float randfloat(int seed, int a, int b, int c, int d) {
   return (float)(hash4(seed,a,b,c,d)%1000000) / 1000000;
 }
@@ -30,77 +58,247 @@ vec2 randvec2(int seed, int a, int b, int c, int d) {
   return vec2(randfloat(seed, a, b, c, d*2), randfloat(seed, a, b, c, d*2+1));
 }
 
-double lerp(double a0, double a1, double w) {
-    return (1.0f - w)*a0 + w*a1;
+
+
+
+
+
+
+int fasthash(int seed, int xPrimed, int yPrimed) {
+  int hash = seed ^ xPrimed ^ yPrimed;
+
+  hash *= 0x27d4eb2d;
+  return hash;
 }
 
-float interpolate(float a0, float a1, float w) {
-  //return (a1 - a0) * w + a0;
-  // Use this cubic interpolation [[Smoothstep]] instead, for a smooth appearance:
-  return (a1 - a0) * (3.0 - w * 2.0) * w * w + a0;
-  
-  // Use [[Smootherstep]] for an even smoother result with a second derivative equal to zero on boundaries:
-  //return (a1 - a0) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a0;
+int fasthash(int seed, int xPrimed, int yPrimed, int zPrimed) {
+  int hash = seed ^ xPrimed ^ yPrimed ^ zPrimed;
+
+  hash *= 0x27d4eb2d;
+  return hash;
+}
+
+float gradient_table3d[] = {
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
+    1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
+    1, 1, 0, 0, -1, 1, 0, 0,  1,-1, 0, 0, -1,-1, 0, 0,
+    1, 1, 0, 0,  0,-1, 1, 0, -1, 1, 0, 0,  0,-1,-1, 0
+};
+
+float gradient_table2d[] = {
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.130526192220052f, 0.99144486137381f, 0.38268343236509f, 0.923879532511287f, 0.608761429008721f, 0.793353340291235f, 0.793353340291235f, 0.608761429008721f,
+    0.923879532511287f, 0.38268343236509f, 0.99144486137381f, 0.130526192220051f, 0.99144486137381f, -0.130526192220051f, 0.923879532511287f, -0.38268343236509f,
+    0.793353340291235f, -0.60876142900872f, 0.608761429008721f, -0.793353340291235f, 0.38268343236509f, -0.923879532511287f, 0.130526192220052f, -0.99144486137381f,
+    -0.130526192220052f, -0.99144486137381f, -0.38268343236509f, -0.923879532511287f, -0.608761429008721f, -0.793353340291235f, -0.793353340291235f, -0.608761429008721f,
+    -0.923879532511287f, -0.38268343236509f, -0.99144486137381f, -0.130526192220052f, -0.99144486137381f, 0.130526192220051f, -0.923879532511287f, 0.38268343236509f,
+    -0.793353340291235f, 0.608761429008721f, -0.608761429008721f, 0.793353340291235f, -0.38268343236509f, 0.923879532511287f, -0.130526192220052f, 0.99144486137381f,
+    0.38268343236509f, 0.923879532511287f, 0.923879532511287f, 0.38268343236509f, 0.923879532511287f, -0.38268343236509f, 0.38268343236509f, -0.923879532511287f,
+    -0.38268343236509f, -0.923879532511287f, -0.923879532511287f, -0.38268343236509f, -0.923879532511287f, 0.38268343236509f, -0.38268343236509f, 0.923879532511287f,
+};
+
+const int PrimeX = 501125321;
+const int PrimeY = 1136930381;
+const int PrimeZ = 1720413743;
+
+int fastfloor(float f) { return f >= 0 ? (int)f : (int)f - 1; }
+float lerp(float a, float b, float t) { return a + t * (b - a); }
+float interp_hermite(float t) { return t * t * (3 - 2 * t); }
+float interp_quintic(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
+float grad_coord(int seed, int xPrimed, int yPrimed, int zPrimed, float xd, float yd, float zd) {
+  int hash = fasthash(seed, xPrimed, yPrimed, zPrimed);
+  hash ^= hash >> 15;
+  hash &= 63 << 2;
+
+  float xg = gradient_table3d[hash];
+  float yg = gradient_table3d[hash | 1];
+  float zg = gradient_table3d[hash | 2];
+
+  return xd * xg + yd * yg + zd * zg;
+}
+
+float grad_coord(int seed, int xPrimed, int yPrimed, float xd, float yd) {
+  int hash = fasthash(seed, xPrimed, yPrimed);
+  hash ^= hash >> 15;
+  hash &= 127 << 1;
+
+  float xg = gradient_table2d[hash];
+  float yg = gradient_table2d[hash | 1];
+
+  return xd * xg + yd * yg;
+}
+
+float perlin3d(int seed, float x, float y, float z) {
+  int x0 = fastfloor(x);
+  int y0 = fastfloor(y);
+  int z0 = fastfloor(z);
+
+  float xd0 = (float)(x - x0);
+  float yd0 = (float)(y - y0);
+  float zd0 = (float)(z - z0);
+  float xd1 = xd0 - 1;
+  float yd1 = yd0 - 1;
+  float zd1 = zd0 - 1;
+
+  float xs = interp_quintic(xd0);
+  float ys = interp_quintic(yd0);
+  float zs = interp_quintic(zd0);
+
+  x0 *= PrimeX;
+  y0 *= PrimeY;
+  z0 *= PrimeZ;
+  int x1 = x0 + PrimeX;
+  int y1 = y0 + PrimeY;
+  int z1 = z0 + PrimeZ;
+
+  float xf00 = lerp(grad_coord(seed, x0, y0, z0, xd0, yd0, zd0), grad_coord(seed, x1, y0, z0, xd1, yd0, zd0), xs);
+  float xf10 = lerp(grad_coord(seed, x0, y1, z0, xd0, yd1, zd0), grad_coord(seed, x1, y1, z0, xd1, yd1, zd0), xs);
+  float xf01 = lerp(grad_coord(seed, x0, y0, z1, xd0, yd0, zd1), grad_coord(seed, x1, y0, z1, xd1, yd0, zd1), xs);
+  float xf11 = lerp(grad_coord(seed, x0, y1, z1, xd0, yd1, zd1), grad_coord(seed, x1, y1, z1, xd1, yd1, zd1), xs);
+
+  float yf0 = lerp(xf00, xf10, ys);
+  float yf1 = lerp(xf01, xf11, ys);
+
+  return lerp(yf0, yf1, zs) * 0.964921414852142333984375f;
+}
+
+float perlin2d(int seed, float x, float y) {
+  int x0 = fastfloor(x);
+  int y0 = fastfloor(y);
+
+  float xd0 = (float)(x - x0);
+  float yd0 = (float)(y - y0);
+  float xd1 = xd0 - 1;
+  float yd1 = yd0 - 1;
+
+  float xs = interp_quintic(xd0);
+  float ys = interp_quintic(yd0);
+
+  x0 *= PrimeX;
+  y0 *= PrimeY;
+  int x1 = x0 + PrimeX;
+  int y1 = y0 + PrimeY;
+
+  float xf0 = lerp(grad_coord(seed, x0, y0, xd0, yd0), grad_coord(seed, x1, y0, xd1, yd0), xs);
+  float xf1 = lerp(grad_coord(seed, x0, y1, xd0, yd1), grad_coord(seed, x1, y1, xd1, yd1), xs);
+
+  return lerp(xf0, xf1, ys) * 1.4247691104677813f;
 }
 
 
 
-float gridval3d(ivec3 ipos, vec3 pos, int seed, int layer) {
-  vec3 pvec = glm::normalize(randvec3(seed, ipos.x, ipos.y, ipos.z, layer));
-  return glm::dot(pos - vec3(ipos), pvec);
+
+TerrainValue::TerrainValue(): value(0), deriv(0) {
+	
 }
 
-float gridval2d(ivec2 ipos, vec2 pos, int seed, int layer) {
-  vec2 pvec = glm::normalize(randvec2(seed, ipos.x, ipos.y, 0, layer));
-  return glm::dot(pos - vec2(ipos), pvec);
+TerrainValue::TerrainValue(float newvalue, float newderiv): value(newvalue), deriv(newderiv) {
+	
+}
+
+TerrainValue TerrainValue::operator+(const TerrainValue& other) const {
+	return TerrainValue(value + other.value, deriv + other.deriv);
+}
+TerrainValue TerrainValue::operator-(const TerrainValue& other) const {
+	return TerrainValue(value - other.value, deriv - other.deriv);
+}
+TerrainValue TerrainValue::operator*(const TerrainValue& other) const {
+	return TerrainValue(value * other.value, deriv*other.value + value*other.deriv);
+}
+
+TerrainValue TerrainValue::operator+(float val) const {
+	return TerrainValue(value + val, deriv);
+}
+TerrainValue TerrainValue::operator-(float val) const {
+	return TerrainValue(value - val, deriv);
+}
+TerrainValue TerrainValue::operator*(float val) const {
+	return TerrainValue(value * val, deriv * val);
+}
+TerrainValue TerrainValue::operator/(float val) const {
+	return TerrainValue(value / val, deriv / val);
+}
+
+TerrainValue TerrainValue::lerp(const TerrainValue& val1, const TerrainValue& val2, float amount) {
+	return TerrainValue(val1.value * (1-amount) + val2.value * amount, val1.deriv * (1-amount) + val2.deriv * amount);
 }
 
 
-float perlin3d(vec3 pos, int seed, int layer) {
-  ivec3 ipos = safefloor(pos);
-  vec3 localpos = pos - vec3(ipos);
-  
-  float val11 = interpolate(gridval3d(ipos+ivec3(0,0,0), pos, seed, layer), gridval3d(ipos+ivec3(1,0,0), pos, seed, layer), localpos.x);
-  float val12 = interpolate(gridval3d(ipos+ivec3(0,1,0), pos, seed, layer), gridval3d(ipos+ivec3(1,1,0), pos, seed, layer), localpos.x);
-  float val1 = interpolate(val11, val12, localpos.y);
-  
-  float val21 = interpolate(gridval3d(ipos+ivec3(0,0,1), pos, seed, layer), gridval3d(ipos+ivec3(1,0,1), pos, seed, layer), localpos.x);
-  float val22 = interpolate(gridval3d(ipos+ivec3(0,1,1), pos, seed, layer), gridval3d(ipos+ivec3(1,1,1), pos, seed, layer), localpos.x);
-  float val2 = interpolate(val21, val22, localpos.y);
-  
-  return interpolate(val1, val2, localpos.z);
-}
-  
-float perlin2d(vec2 pos, int seed, int layer) {
-  ivec2 ipos = safefloor(pos);
-  vec2 localpos = pos - vec2(ipos);
-  
-  float val1 = interpolate(gridval2d(ipos, pos, seed, layer), gridval2d(ipos+ivec2(1,0), pos, seed, layer), localpos.x);
-  float val2 = interpolate(gridval2d(ipos+ivec2(0,1), pos, seed, layer), gridval2d(ipos+ivec2(1,1), pos, seed, layer), localpos.x);
-  return interpolate(val1, val2, localpos.y);
+
+ShapeValue::ShapeValue(const TerrainValue& terrvalue, Blocktype block): TerrainValue(terrvalue), btype(block) {
+	
 }
 
-float fractal_perlin2d(vec2 pos, float scale, float divider, int seed, int layer) {
-  float val = 0;
-  int i = 0;
-  while (scale > 1) {
-    val += perlin2d(pos / scale, seed, layer*100 + i) * scale;
-    scale /= divider;
-    i ++;
-  }
-  return val;
+Blocktype ShapeValue::blocktype(int scale) {
+	if (std::abs(value) > (scale-1) * 1.73f * deriv) {
+		// cout << " val " << value << ' ' << scale << ' ' << deriv << ' ' << (scale-1) * 1.73f * deriv << endl;
+		return value >= 0 ? btype : BLOCK_NULL;
+	}
+	return BLOCK_SPLIT;
 }
 
-float fractal_perlin3d(vec3 pos, float scale, float divider, int seed, int layer) {
-  float val = 0;
-  int i = 0;
-  while (scale > 1) {
-    val += perlin3d(pos / scale, seed, layer*100 + i) * scale;
-    scale /= divider;
-    i ++;
-  }
-  return val;
+
+
+TerrainContext::TerrainContext(int nseed, vec3 curpos): seed(nseed), sample_pos(curpos) {
+	
 }
+
+
+ShapeContext::ShapeContext(int nseed, vec3 curpos, LayerFunc* funcarr, int num_funcs): TerrainContext(nseed, curpos) {
+	for (int i = 0; i < num_funcs; i ++) {
+		layerfuncs[i] = funcarr[i];
+		layers[i].deriv = -1;
+	}
+}
+
+
+TerrainValue ShapeContext::layer(int index) {
+	if (layers[index].deriv != -1) {
+		return layers[index];
+	} else {
+		layers[index] = layerfuncs[index](this, sample_pos);
+		return layers[index];
+	}
+}
+
+
+
 
 
 DEFINE_PLUGIN(TerrainGenerator);
@@ -122,105 +320,77 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 
 
-
-
-
-
-
-
-template <typename ... Shapes>
-float ShapeResolver<Shapes...>::get_max_value(vec3 pos) {
-	float vals[sizeof...(Shapes)] = {Shapes::gen_value(seed, pos)...};
-	return *std::max_element(vals, vals+sizeof...(Shapes));
+template <typename Layers, ShapeFunc ... Shapes>
+void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
+	
+	// float max_deriv = 0;
+	// for (int i = 0; i < 100000000; i ++) {
+	// 	vec3 pos = randvec3(123435, i, 1, 3, 4) * 100.0f;
+	// 	vec3 dir = randvec3(123456, i, 45, 3, 2) * randfloat(123232, i, 54, 32, 2);
+	// 	float val1 = perlin3d(12345, pos.x, pos.y, pos.z);
+	// 	float val2 = perlin3d(12345, pos.x + dir.x, pos.y + dir.y, pos.z + dir.z);
+	// 	float deriv = std::abs(val1 - val2) / glm::length(dir);
+	// 	if (deriv > max_deriv) {
+	// 		max_deriv = deriv;
+	// 	}
+	// }
+	// cout << max_deriv << " DERIV" << endl;
+	
+	double start = getTime();
+	ShapeFunc shapes[] = {Shapes...};
+	gen_node(node, shapes, sizeof...(Shapes));
+	double time = getTime() - start;
+	cout << "generated " << node.globalpos << " in " << time << endl;
 }
 
-template <typename ... Shapes>
-float ShapeResolver<Shapes...>::get_max_deriv() {
-	float vals[sizeof...(Shapes)] = {Shapes::max_deriv()...};
-	return *std::max_element(vals, vals+sizeof...(Shapes));
-}
-
-template <typename ... Shapes>
-template <typename Shape>
-Blocktype ShapeResolver<Shapes...>::gen_func(ivec3 globalpos, int scale) {
-	float val = Shape::gen_value(seed, vec3(globalpos) + float(scale)/2);
-	float level_needed = float(scale-1)/2 * Shape::max_deriv() * 2.1f;
-	if (val >= level_needed) {
-		return Shape::block_val();
-	} else if (val <= -level_needed) {
-		return BLOCK_NULL;
-	} else {
-		return BLOCK_SPLIT;
+template <typename Layers, ShapeFunc ... Shapes>
+Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes) {
+	vec3 pos = vec3(node.globalpos) + float(node.scale)/2;
+	
+	Blocktype blocktype;
+	ShapeContext context (seed, pos, layers.layers, layers.size);
+	int index;
+	for (index = 0; index < num_shapes; index ++) {
+		ShapeValue value = shapes[index](&context, pos);
+		blocktype = value.blocktype(node.scale);
+		// cout << "NEW blocktype " << blocktype << endl;
+		if (blocktype != BLOCK_NULL) {
+			break;
+		}
 	}
-}
-
-
-template <typename ... Shapes>
-template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
-	Blocktype val = gen_func<FirstShape>(node.globalpos, node.scale);
-	if (val == BLOCK_NULL) {
-		return gen_block<SecondShape,OtherShapes...>(node);
-	} else {
-		return gen_block<FirstShape,SecondShape,OtherShapes...>(node, val);
+	
+	if (blocktype == BLOCK_NULL) {
+		blocktype = 0;
 	}
-}
-
-template <typename ... Shapes>
-template <typename Shape>
-Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node) {
-	Blocktype val = gen_func<Shape>(node.globalpos, node.scale);
-	if (val == BLOCK_NULL) {
-		val = 0;
-	}
-	return gen_block<Shape>(node, val);
-}
-
-
-
-template <typename ... Shapes>
-template <typename ... CurShapes>
-Blocktype ShapeResolver<Shapes...>::gen_block(NodeView node, Blocktype myval) {
-  if (myval != BLOCK_SPLIT or node.scale == 1) {
-		if (myval == BLOCK_NULL) myval = 0;
-		node.set_block(new Block(myval));
-    return myval;
-  } else {
+	
+	if (blocktype == BLOCK_SPLIT) {
 		node.split();
-    Blocktype val = gen_block<CurShapes...>(node.child(0));
-    bool all_same = val != -1;
+		blocktype = gen_node(node.child(0), shapes + index, num_shapes - index);
 		for (int i = 1; i < BDIMS3; i ++) {
-			Blocktype newval = gen_block<CurShapes...>(node.child(i));
-			all_same = all_same and newval == val;
+			Blocktype newblock = gen_node(node.child(i), shapes, num_shapes);
+			blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
 		}
-    if (all_same) {
-			node.join();
-			node.set_block(new Block(val));
-      return val;
-    } else {
-      return -1;
-    }
-  }
+		if (blocktype == BLOCK_SPLIT) {
+			return BLOCK_SPLIT;
+		}
+		node.join();
+	}
+	
+	node.set_block(new Block(blocktype));
+	return blocktype;
 }
 
-
-
-template <typename ... Shapes>
-void ShapeResolver<Shapes...>::generate_chunk(NodeView node) {
-	// std::stringstream ss;
-	gen_block<Shapes...>(node);
-	// node.from_file(ss);
-}
-
-template <typename ... Shapes>
-int ShapeResolver<Shapes...>::get_height(ivec3 pos) {
-	float val;
-	while (std::abs(val = get_max_value(vec3(pos) + 0.5f)) > 2) {
-		if (val > 0) {
-			pos.y += std::max(1.0f, val / get_max_deriv() / 2);
-		} else {
-			pos.y += std::min(-1.0f, val / get_max_deriv() / 2);
-		}
+template <typename Layers, ShapeFunc ... Shapes>
+int ShapeResolver<Layers,Shapes...>::get_height(ivec3 ipos) {
+	LayerFunc func = layers.layers[0];
+	vec3 pos = ipos;
+	TerrainContext context (seed, pos);
+	TerrainValue val = func(&context, pos);
+	int i = 0;
+	while (std::abs(val.value) > 2 and i < 200) {
+		pos.y += val.value / val.deriv;
+		val = func(&context, pos);
+		i ++;
 	}
 	return pos.y;
 }
@@ -233,198 +403,131 @@ int ShapeResolver<Shapes...>::get_height(ivec3 pos) {
 
 
 
+using UndefShapeFunc = TerrainValue (*) (ShapeContext* ctx, vec3 pos);
 
-template <typename Shape, int value>
-struct SolidType : public Shape {
-	static Blocktype block_val() {
-		return value;
-	}
-};
+template <Blocktype btype, LayerFunc func>
+ShapeValue set_blocktype(ShapeContext* ctx, vec3 pos) {
+	return ShapeValue(func(ctx, pos), btype);
+}
 
-template <typename Shape, int x, int y, int z>
-struct Shift : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos - vec3(x,y,z));
-	}
-};
-
-template <typename Shape, int x, int y, int z>
-struct Scale : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos * vec3(x,y,z));
-	}
-	
-	static float max_deriv() {
-		return Shape::max_deriv() * std::max(x, std::max(y, z));
-	}
-};
-
-template <typename ... Shapes>
-struct Add {
-	static float gen_value(int seed, vec3 pos) {
-		return (Shapes::gen_value(seed, pos) + ...);
-	}
-	
-	static float max_deriv() {
-		return (Shapes::max_deriv() + ...);
-	}
-};
-
-template <typename Shape1, int num, int denom = 1>
-struct AddVal : public Shape1 {
-	static constexpr float val = float(num) / denom;
-	static float gen_value(int seed, vec3 pos) {
-		return Shape1::gen_value(seed, pos) + val;
-	}
-};
-
-template <typename Shape1, int num, int denom = 1>
-struct MulVal : public Shape1 {
-	static constexpr float val = float(num) / denom;
-	static float gen_value(int seed, vec3 pos) {
-		return Shape1::gen_value(seed, pos) * val;
-	}
-	
-	static float max_deriv() {
-		return Shape1::max_deriv() * std::abs(val);
-	}
-};
+template <Blocktype btype, UndefShapeFunc func>
+ShapeValue set_blocktype(ShapeContext* ctx, vec3 pos) {
+	return ShapeValue(func(ctx, pos), btype);
+}
 
 
 
 
 
 
-template <typename Shape, int num_falloff, int denom_falloff = 1>
-struct HeightFalloff : public Shape {
-	static float gen_value(int seed, vec3 pos) {
-		return Shape::gen_value(seed, pos) - pos.y * num_falloff / denom_falloff;
-	}
-	
-	static float max_deriv() {
-		return Shape::max_deriv() + num_falloff / denom_falloff;
-	}
-};
 
-template <int scale, int layer>
-struct Perlin2d {
-	static float gen_value(int seed, vec3 pos) {
-		return perlin2d(vec2(pos.x, pos.z) / float(scale), seed, layer) * scale;
-	}
-	
-	static float max_deriv() {
-		return 1.5f;
-	}
-};
-
-template <int max_scale, int divider, int layer>
-struct FractalPerlin2d {
-	static float gen_value(int seed, vec3 pos) {
-		float val = 0;
-	  int i = 0;
-		int scale = max_scale;
-	  while (scale > 1) {
-	    val += perlin2d(vec2(pos.x, pos.z) / float(scale), seed, layer*100 + i) * scale;
-	    scale /= divider;
-	    i ++;
-	  }
-		val -= pos.y * max_deriv();
-	  return val;
-	}
-	
-	static float max_deriv() {
-		return std::max(1.0, std::log(max_scale) / std::log(divider));
-	}
-};
-
-template <int scale, int layer>
-struct Perlin3d {
-	static float gen_value(int seed, vec3 pos) {
-		return perlin3d(pos / float(scale) + randvec3(seed, layer, 143, 211, 566), seed, layer) * scale * 2;
-	}
-	
-	static float max_deriv() {
-		return 1.5f;
-	}
-};
-
-template <int max_scale, int divider, int layer>
-struct FractalPerlin3d {
-	static float gen_value(int seed, vec3 pos) {
-		// return perlin3d(pos / float(max_scale), seed, layer) * max_scale;
-		float val = 0;
-	  int i = 0;
-		int scale = max_scale;
-	  while (scale > 1) {
-	    val += perlin3d(pos / float(scale), seed, layer*100 + i) * scale;
-	    scale /= divider;
-	    i ++;
-	  }
-	  return val;
-	}
-	
-	static float max_deriv() {
-		return std::log(max_scale) / std::log(divider);
-	}
-};
-
-
-template <int scale, int layer>
-struct RidgePerlin3d : Perlin3d<scale, layer> {
-	static float gen_value(int seed, vec3 pos) {
-		return scale - std::abs(Perlin3d<scale, layer>::gen_value(seed, pos));
-	}
-};
+template <int num_falloff, int denom_falloff = 1>
+TerrainValue height_falloff(TerrainContext* ctx, vec3 pos) {
+	return TerrainValue(
+		-pos.y * num_falloff / denom_falloff,
+		num_falloff / denom_falloff
+	);
+}
 
 
 
 
+template <int scale, int height, int layer>
+TerrainValue perlin2d(TerrainContext* ctx, vec3 pos) {
+	return TerrainValue(
+		perlin2d(ctx->seed + layer, pos.x / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
+	);
+}
 
+
+
+
+template <int scale, int height, int layer>
+TerrainValue perlin3d(TerrainContext* ctx, vec3 pos) {
+	return TerrainValue(
+		perlin3d(ctx->seed + layer, pos.x / float(scale), pos.y / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
+	);
+}
 
 
 
 template <int height>
-struct FlatTerrain {
-	static float gen_value(int seed, vec3 pos) {
-		return height - pos.y;
-	}
-	
-	static float max_deriv() {
-		return 1;
-	}
-};
+TerrainValue flat_terrain(TerrainContext* ctx, vec3 pos) {
+	TerrainValue val (
+		height - pos.y,
+		1
+	);
+	return val;
+}
 
 template <int height, int slope_numer, int slope_denom = 1>
-struct SlopedTerrain {
-	static float gen_value(int seed, vec3 pos) {
-		return height + pos.x * slope_numer / slope_denom - pos.y;
-	}
-	
-	static float max_deriv() {
-		return std::max(std::abs((float)slope_numer/slope_denom), 1.0f);
-	}
-};
+TerrainValue sloped_terrain(TerrainContext* ctx, vec3 pos) {
+	return TerrainValue(
+		height + pos.x * slope_numer / slope_denom - pos.y,
+		std::max(std::abs((float)slope_numer/slope_denom), 1.0f)
+	);
+}
+
+template <int index>
+TerrainValue layer_ref(ShapeContext* ctx, vec3 pos) {
+	return ctx->layer(index);
+}
 
 
 
 
+TerrainValue land_level(TerrainContext* ctx, vec3 pos) {
+	// return perlin2d<64,64,1>(ctx,pos) + height_falloff<1>(ctx,pos);
+	return perlin3d<64,64,0>(ctx,pos) + perlin3d<9,9,1>(ctx,pos)
+		+ perlin3d<32,32,4>(ctx,pos) + perlin2d<512,256,9>(ctx,pos) + height_falloff<1>(ctx,pos);
+}
+
+template <int height>
+TerrainValue shifted_land_level(TerrainContext* ctx, vec3 pos) {
+	return land_level(ctx, pos - vec3(0,height,0));
+}
+
+ShapeValue grass_level(ShapeContext* ctx, vec3 pos) {
+	return ShapeValue(
+		ctx->layer(1) - 4,
+		2
+	);
+}
+
+ShapeValue dirt_level(ShapeContext* ctx, vec3 pos) {
+	return ShapeValue(
+		(ctx->layer(0) + ctx->layer(1)) / 2 - 2,
+		1
+	);
+}
+
+EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
+	// LayerResolver<>,
+	LayerResolver<land_level, shifted_land_level<5>>,
+	// LayerResolver<flat_terrain<16>>,
+	// LayerResolver<sloped_terrain<16,1,3>>,
+	set_blocktype<3,layer_ref<0>>,
+	// set_blocktype<1,layer_ref<1>>,
+	// set_blocktype<2,layer_ref<2>>
+	dirt_level,
+	grass_level
+	// set_blocktype<3,land_level>,
+	// set_blocktype<1,shifted_land_level<3>>,
+	// set_blocktype<2,shifted_land_level<5>>
+	// set_blocktype<1,land_level>
+>);
 
 
-
-
-using FlatWorld = ShapeResolver<
-	SolidType<FlatTerrain<32>, 1>
->;
-// EXPORT_PLUGIN_TEMPLATE(FlatWorld);
-
-using LandLevel = HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;
-
-using TestWorld = ShapeResolver<
-	SolidType<LandLevel, 3>,
-	SolidType<Shift<AddVal<LandLevel, -3>, 0,2,0>, 1>,
-	SolidType<Shift<AddVal<LandLevel, -5>, 0,5,0>, 2>
->;
-EXPORT_PLUGIN_TEMPLATE(TestWorld);
+// using LandLevel = HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;
+//
+// using TestWorld = ShapeResolver<
+// 	SolidType<LandLevel, 3>//,
+// 	// SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -3>, 0,2,0>, 1>,
+// 	// SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -5>, 0,5,0>, 2>
+// >;
+// EXPORT_PLUGIN_TEMPLATE(TestWorld);
 
 
 

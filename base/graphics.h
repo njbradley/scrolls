@@ -60,7 +60,7 @@ public:
 	ivec2 screen_dims = ivec2(1024, 728);
 	
 	GraphicsContext();
-	~GraphicsContext();
+	virtual ~GraphicsContext();
 	
 	RenderBuf* blockbuf;
 	ViewBox* viewbox;

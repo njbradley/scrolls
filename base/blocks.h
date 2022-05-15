@@ -15,7 +15,9 @@ then keep dividing as needed to represent the world. The internal nodes
 of the tree are represented as Node objects, and the leaf nodes
 are Block objects.
 
-Example:
+
+For example, the block structure here:
+
 +------------+
 |+----++----+|
 ||    ||[][]||
@@ -26,15 +28,35 @@ Example:
 |+----++----+|
 +------------+
 
+Gives the tree:
+
+          +------------+
+          |            |
+          |            |
+          |            |
+          |            |
+          |            |
+          |            |
+          |            |
+          +------------+
+       /     |      |     \
+  +----+  +----+  +----+  +----+
+  |    |  |    |  |    |  |    |
+  |    |  |    |  |    |  |    |
+  +----+  +----+  +----+  +----+
+          / | | \         / | | \
+        [] [] [] []     [] [] [] []
+
 In the example, every box is a node, and all the boxes that are not
-subdivided would be the leaf nodes
+subdivided would be the leaf nodes. The example is also in 2d so there are
+only 4 children, but real nodes are 3d and have 8 children
 
 When manipulating nodes in the tree, you will rarely interact
 with raw Node* pointers, instead use the NodeView and similar
 classes, which wrap a Node* pointer with helpful functions and
 bookeeping of size and position
 */
-
+	
 struct Block {
 	int value = 0;
 	int renderindex = -1;
@@ -44,7 +66,8 @@ struct Block {
 	enum : uint32 {
 		PROPOGATING_FLAGS = 0x0000ffff,
 		RENDER_FLAG = 0x00000001,
-		CONTINUES_FLAG = 0x00010000
+		CHILDREN_FLAG = 0x00010000,
+		PARENT_FLAG = 0x00020000
 	};
 	
 	Block();
@@ -54,10 +77,11 @@ struct Block {
 struct Node {
 	Node* parent = nullptr;
 	union {
-		Node* children;
+		Node* children = nullptr;
 		Block* block;
 	};
 	uint32 flags = 0;
+	int lastval = 1;
 	
 	Node();
 };
@@ -97,44 +121,97 @@ public:
 	NodeView();
 	NodeView(Node* node, ivec3 gpos, int nscale);
 	
+	// whether this view points to a real node
+	// default constructed NodeViews will return false,
+	// and some methods that can fail (get_global, child)
+	// will return an instance that is not valid on failure
 	bool isvalid() const;
-	bool isnull() const;
-	bool continues() const;
+	operator bool() const;
+	// whether the node has a block (accessed by block())
+	// hasblock() and haschildren() cannot both be true
+	bool hasblock() const;
+	// whether the node has children (accesed by child())
+	bool haschildren() const;
+	bool hasparent() const;
 	
+	// the index where this node is in the parent node
+	// ie: node.parent().child(node.parentindex()) == node
 	NodeIndex parentindex() const;
 	
+	// the block stored at this node
+	// warning: if no block is stored, a possibly random pointer will
+	// be returned, so be sure to access this only when sure there
+	// is a block (when hasblock() is true)
 	Block* block();
 	const Block* block() const;
 	
+	// turns the current view into an invaid instance
+	// basically the same as node = NodeView()
 	void invalidate();
 	
+	// moves the view down, up, or sideways on the tree.
+	// returns true if the movement was successful.
 	bool step_down(NodeIndex pos);
 	bool step_up();
 	bool step_side(NodeIndex pos);
 	
+	// returns a new view to the parent node
+	NodeView parent();
+	// returns a new view to the child at the given index.
 	NodeView child(NodeIndex index);
+	// returns a view of the block at the given position
+	// if the position is outside of the root node of the tree,
+	// an invalid view is returned.
+	// if the position is inside the root node but there isnt
+	// a node with the given scale, the smallest node will be returned
+	// this means passing 1 as scale guarantees you will recieve a leaf node
 	NodeView get_global(ivec3 pos, int scale);
+	// behaves similar to get_global, this method will try to move
+	// the current view to the given position
+	// if the position is outside the root node, false is returned.
+	// the view will be left pointing at the root node
 	bool moveto(ivec3 pos, int scale);
 	
+	// turns a leaf node into an inner node, and
+	// creates 8 child nodes
 	void join();
+	// turns an inner node into a leaf node, deleting
+	// all children previously on the node
 	void split();
 	
-	bool has_flag(uint32 flag) const;
+	// these methods read/write/modify the flags set on nodes,
+	// where flag is a bit mask. the flags are defined in the
+	// block class,
+	bool test_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
 	
+	// this method should be called whenever the structure or value of
+	// a node is changed
 	void on_change();
 	
+	// modify the block that this node holds.
 	void set_block(Block* block);
 	Block* swap_block(Block* block);
 	
+	// read/write the current nodes tree to/from a file.
 	void from_file(istream& ifile);
 	void to_file(ostream& ofile);
+	
+	// swaps the tree at the current node with the tree pointed to
+	// by other
+	void swap_tree(NodeView other);
+	// deletes the current tree and copies the tree pointed to
+	// by other onto this node
+	void copy_tree(NodeView other);
 	
 	bool operator==(const NodeView& other) const;
 	bool operator!=(const NodeView& other) const;
 // protected:
 	Node* node = nullptr;
+	
+	void copy_tree(Node* src, Node* dest);
+	void del_tree(Node* node);
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -184,22 +261,40 @@ public:
 };
 	
 
-// This class owns a full voxel tree, that is located at globalpos and
-// is scale big.
-class BlockContainer {
+// this is the class that allocates and owns an octree
+// and all nodes
+class BlockContainer : protected NodeView {
 public:
-	ivec3 globalpos;
-	int scale;
-	
 	BlockContainer(ivec3 pos, int scale);
+	BlockContainer(const BlockContainer& other);
+	BlockContainer(BlockContainer&& other);
+	~BlockContainer();
 	
-	BlockView get(ivec3 pos);
-	NodeView get_global(ivec3 pos, int scale);
+	BlockContainer& operator=(BlockContainer other);
 	
-	NodeView rootview();
-private:
-	Node* root;
+	void swap(BlockContainer& other);
+	
+	using NodeView::globalpos;
+	using NodeView::scale;
+	
+	using NodeView::hasblock;
+	using NodeView::haschildren;
+	using NodeView::block;
+	using NodeView::child;
+	using NodeView::get_global;
+	using NodeView::split;
+	using NodeView::join;
+	using NodeView::test_flag;
+	using NodeView::set_flag;
+	using NodeView::reset_flag;
+	using NodeView::set_block;
+	using NodeView::swap_block;
+	using NodeView::from_file;
+	using NodeView::to_file;
+	
+	NodeView root() const;
 };
+
 
 
 
@@ -260,12 +355,21 @@ inline bool NodeView::isvalid() const {
 	return scale >= 0;
 }
 
-inline bool NodeView::isnull() const {
-	return node == nullptr;
+inline bool NodeView::hasblock() const {
+	return !haschildren() and node->block != nullptr;
 }
 
-inline bool NodeView::continues() const {
-	return node->flags & Block::CONTINUES_FLAG;
+inline bool NodeView::haschildren() const {
+	return node->flags & Block::CHILDREN_FLAG;
+}
+
+inline bool NodeView::hasparent() const {
+	// return node->parent != nullptr;
+	return node->flags & Block::PARENT_FLAG;
+}
+
+inline bool NodeView::test_flag(uint32 flag) const {
+	return node->flags & flag;
 }
 
 inline NodeIndex NodeView::parentindex() const {

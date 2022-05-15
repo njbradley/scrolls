@@ -22,7 +22,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	// for (BlockView block : BlockIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
 	for (NodeView& node : BlockIterable<FlagNodeIter>(mainblock, Block::RENDER_FLAG)) {
 		node.reset_flag(Block::RENDER_FLAG);
-		if (node.continues()) continue;
+		if (node.haschildren()) continue;
 		BlockView block = node;
 		// continue;
 		if (block->value != 0) {
