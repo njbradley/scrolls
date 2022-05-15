@@ -1,10 +1,13 @@
 #include "blocks.h"
 #include "game.h"
+#include "debug.h"
 
 
 int main() {
 	pluginloader.load();
+	
 	Game* game = Game::plugnew();
+	debuglines = DebugLines::plugnew();
 	
 	game->setup_gameloop();
 	while (game->playing) {
@@ -12,6 +15,7 @@ int main() {
 	}
 	
 	plugdelete(game);
+	plugdelete(debuglines);
 	
 	return 0;
 }

@@ -5,6 +5,7 @@
 #include "blockiter.h"
 #include "terrain.h"
 #include "threadpool/pool.h"
+#include "debug.h"
 
 #include <set>
 #include <sstream>
@@ -242,6 +243,14 @@ void SingleGame::timestep() {
 	deltatime = std::min(max_deltaTime, deltatime);
 	last_time = cur_time;
 	
+  std::stringstream debugstr;
+  debugstr << "FPS: " << 1 / deltatime << endl;
+  debugstr << "spectatorpos: " << spectator.position << endl;
+  debugstr << "abcdefghijklmnopqrstuvwxyz" << endl;
+  debugstr << "1234567890 [({<()>})]" << endl;
+  debuglines->clear();
+  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
+  
 	spectator.timestep(cur_time, deltatime);
 	graphics->viewbox->timestep(cur_time, deltatime);
 

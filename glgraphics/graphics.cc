@@ -4,6 +4,7 @@
 
 #include "shader.h"
 #include "textures.h"
+#include "debug.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -104,7 +105,7 @@ void myGlfwErrorFunc(int error_code, const char* str) {
 }
 
 void GLGraphics::init_graphics() {
-  glfwSetErrorCallback(myGlfwErrorFunc);
+//   glfwSetErrorCallback(myGlfwErrorFunc);
 	
   ASSERT_RUN(glfwInit());
   
@@ -259,11 +260,8 @@ void GLGraphics::block_draw_call() {
 }
 
 void GLGraphics::swap() {
-
-
-	blockbuf->sync();
-	// ((GLRenderBuf*) blockbuf)->lock.lock();
-
+	block_draw_call();
+  ((GLDebugLines*)debuglines)->draw_call();
 	
 	block_draw_call();
  
