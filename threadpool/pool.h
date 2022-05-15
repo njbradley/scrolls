@@ -5,6 +5,8 @@
 #include <vector>
 #include <queue>
 #include <thread>
+#include <mutex>
+#include <functional>
 
 class Pool {
 
@@ -18,14 +20,18 @@ public:
 
     std::vector<std::thread> pool;
 
-    std::queue<void()> job_queue;
+    std::queue< std::function<void()> > job_queue;
 
     void thread_loop();
     
-    void pushJob(function<void()> job);
+    void pushJob(const std::function<void()>& job);
+
+    std::mutex queue_mutex;
+
+    std::condition_variable v;
 
 
     ~Pool();
-}
+};
 
 #endif

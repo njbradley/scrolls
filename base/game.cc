@@ -4,6 +4,7 @@
 #include "blocks.h"
 #include "blockiter.h"
 #include "terrain.h"
+#include "threadpool/pool.h"
 
 #include <set>
 #include <sstream>

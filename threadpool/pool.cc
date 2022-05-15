@@ -4,34 +4,39 @@
 
 Pool::Pool(int num) {
     num_threads = num;
-    job_queue = queue<void()>();
+    job_queue = std::queue< std::function<void()> > ();
     is_alive = true;
-    for (int i = 0; i < num; i++) {
-        pool.push_back(std::thread(&Pool::job, this));
+    pool.resize(num_threads);
+    for (int i = 0; i < num_threads; i++) {
+        pool[i] = std::thread(&Pool::thread_loop, this);
     }
 }
 
 void Pool::thread_loop() {
+    
     while (true) {
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::function<void()> job;
+            {
+                std::unique_lock<std::mutex> lock(queue_mutex);
 
-            this.wait(lock, [this](){
-                return !queue.empty() || is_alive;
-            });
-            Job = queue.front();
-            queue.pop();
+                v.wait(lock, [&] { return !job_queue.empty() || is_alive; });
+
+                job = job_queue.front();
+                job_queue.pop();
+            }
+
+            job; // function<void()> type
         }
-
-        Job(); // function<void()> type
+       
     }
 }
 
-void Pool::pushJob() {
+void Pool::pushJob(const std::function<void()>& job) {
     {
         std::unique_lock<std::mutex> lock(queue_mutex);
-        queue.push(New_Job);
+        job_queue.push(job);
     }
 
-    std::condition_variable::notify_one();
+    v.notify_one();
 }
