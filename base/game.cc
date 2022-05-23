@@ -5,6 +5,7 @@
 #include "blockiter.h"
 #include "terrain.h"
 #include "debug.h"
+#include "entity.h"
 
 #include <set>
 #include <sstream>
@@ -12,7 +13,7 @@
 #include <fstream>
 #include <string>
 #include <sys/types.h>
- #include <sys/stat.h>
+#include <sys/stat.h>
 
 DEFINE_PLUGIN(Game);
 
@@ -25,6 +26,27 @@ const int renderdistance = 2;
 const int chunks = 8;
 
 const bool overwrite_saves = true;
+
+
+
+
+Chunk::Chunk(SingleGame* newgame, ivec3 pos, int scale): game(newgame), BlockContainer(pos,scale) {
+  
+}
+
+BlockContainer* Chunk::find_neighbor(ivec3 pos, int goalscale) {
+  for (Chunk& chunk : game->generatedWorld) {
+    if (chunk.hitbox().contains(IHitCube(pos, goalscale))) {
+      return &chunk;
+    }
+  }
+  return nullptr;
+}
+
+
+
+
+
 
 SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
@@ -43,7 +65,7 @@ SingleGame::SingleGame() {
 		cout << "blah: " << i << endl;
 		cout << "x: " << x << " y: " << y << " z: " << z << endl;
     // generatedWorld.emplace_back(ivec3(x, y, z)*worldsize, worldsize);
-		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
+		generatedWorld.push_back(Chunk(this, ivec3(x, y, z)*worldsize, worldsize));
 		if (x == 0) {
 			if (z == 0) {
 				if (y == 0) {

@@ -13,8 +13,8 @@ int main() {
 		game->timestep();
 	}
 	
-	plugdelete(game);
 	plugdelete(debuglines);
+	plugdelete(game);
 	
 	return 0;
 }

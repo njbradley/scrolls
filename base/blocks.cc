@@ -1,5 +1,6 @@
 #include "blocks.h"
 #include "blockiter.h"
+#include "entity.h"
 
 Block::Block() {
 	
@@ -16,6 +17,10 @@ NodeView::NodeView(): scale(-1) {
 
 NodeView::NodeView(Node* nnode, ivec3 gpos, int nscale): node(nnode), globalpos(gpos), scale(nscale) {
 	
+}
+
+IHitCube NodeView::hitbox() const {
+	return IHitCube(globalpos, scale);
 }
 
 bool NodeView::step_down(NodeIndex pos) {
@@ -64,17 +69,19 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 }
 
 bool NodeView::moveto(ivec3 pos, int goalscale) {
-	ivec3 diff3 = pos - globalpos;
-  int diffmax = std::max(std::max(diff3.x, diff3.y), diff3.z);
-  int diffmin = std::min(std::min(diff3.x, diff3.y), diff3.z);
-  while (diffmax >= scale or diffmin < 0 or scale < goalscale) {
+	IHitCube goalbox (pos, goalscale);
+	while (!hitbox().contains(goalbox)) {
     if (!step_up()) {
-			return !(diffmax >= scale or diffmin < 0);
+			if (!goalbox.contains(hitbox()) and node->container != nullptr) {
+				NodeView othernode = node->container->get_global(pos, goalscale);
+				if (othernode.isvalid()) {
+					*this = othernode;
+					return true;
+				}
+				return false;
+			}
+			return true;
 		}
-    
-    diff3 = pos - globalpos;
-    diffmax = std::max(std::max(diff3.x, diff3.y), diff3.z);
-    diffmin = std::min(std::min(diff3.x, diff3.y), diff3.z);
   }
   
   while (scale > goalscale) {
@@ -109,10 +116,10 @@ void NodeView::set_flag(uint32 flag) {
 	flag &= Block::PROPOGATING_FLAGS;
 	if (flag == 0) return;
 	
-	Node* curnode = node->parent;
-	while (curnode != nullptr) {
-		curnode->flags |= flag;
+	Node* curnode = node;
+	while (curnode->flags & Block::PARENT_FLAG) {
 		curnode = curnode->parent;
+		curnode->flags |= flag;
 	}
 }
 
@@ -289,6 +296,7 @@ NodeIter NodeIter::operator++() {
 
 BlockContainer::BlockContainer(ivec3 gpos, int nscale): NodeView(new Node(), gpos, nscale) {
 	reset_flag(Block::PARENT_FLAG);
+	node->container = this;
 }
 
 BlockContainer::~BlockContainer() {
@@ -301,6 +309,7 @@ BlockContainer::~BlockContainer() {
 BlockContainer::BlockContainer(const BlockContainer& other): NodeView(other) {
 	node = new Node();
 	root().copy_tree(other.root());
+	node->container = this;
 }
 
 BlockContainer::BlockContainer(BlockContainer&& other) {
@@ -316,6 +325,29 @@ void BlockContainer::swap(BlockContainer& other) {
 	std::swap(node, other.node);
 	std::swap(globalpos, other.globalpos);
 	std::swap(scale, other.scale);
+	if (node != nullptr) node->container = this;
+	if (other.node != nullptr) other.node->container = &other;
+}
+
+BlockContainer* BlockContainer::find_neighbor(ivec3 pos, int goalscale) {
+	return nullptr;
+}
+
+NodeView BlockContainer::get_global(ivec3 pos, int goal_scale) {
+	NodeView node = root();
+	IHitCube goalbox (pos, goal_scale);
+	if (node.hitbox().contains(goalbox)) {
+		if (node.moveto(pos, goal_scale)) {
+			return node;
+		}
+		return NodeView();
+	}
+	
+	BlockContainer* other = find_neighbor(pos, goal_scale);
+	if (other != nullptr) {
+		return other->NodeView::get_global(pos, goal_scale);
+	}
+	return NodeView();
 }
 
 NodeView BlockContainer::root() const {

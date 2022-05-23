@@ -7,6 +7,15 @@
 #include "blocks.h"
 #include "player.h"
 
+class Chunk : public BlockContainer {
+public:
+	SingleGame* game;
+	
+	Chunk(SingleGame* newgame, ivec3 pos, int scale);
+	
+	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);
+};
+
 // Game is the main class that runs the whole game
 // setup_gameloop is called on the first frame, then timestep is called repeatedly
 // until playing is false
@@ -35,10 +44,13 @@ protected:
 	Renderer* renderer;
 	
 	// Allocate on the heap because we want to change render distance.
-	vector<BlockContainer> generatedWorld;
+	vector<Chunk> generatedWorld;
 
 	Spectator spectator;
 	Controls* controls;
+	
+	friend class Chunk;
 };
+
 
 #endif
