@@ -11,7 +11,6 @@ Pool::Pool(int num) {
     job_queue = std::queue< std::function<void()> > ();
     is_alive = true;
     pool.resize(num_threads);
-    std::cout << __LINE__ << std::endl;
 
     for (int i = 0; i < num_threads; i++) {
         pool[i] = std::thread(&Pool::thread_loop, this);
@@ -36,7 +35,7 @@ void Pool::thread_loop() {
                 job_queue.pop();
             }
 
-            job; // function<void()> type
+            job(); // function<void()> type
         }
        
     }

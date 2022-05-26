@@ -340,7 +340,7 @@ void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
 	ShapeFunc shapes[] = {Shapes...};
 	gen_node(node, shapes, sizeof...(Shapes));
 	double time = getTime() - start;
-	cout << "generated " << node.globalpos << " in " << time << endl;
+	// cout << "generated " << node.globalpos << " in " << time << endl;
 }
 
 template <typename Layers, ShapeFunc ... Shapes>

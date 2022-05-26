@@ -13,6 +13,9 @@
 #include <fstream>
 #include <string>
 #include <thread> 
+#include <mutex>
+#include <condition_variable>
+#include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -24,14 +27,13 @@ EXPORT_PLUGIN(SingleGame);
 const int worldsize = 32;
 
 const int renderdistance = 32;
-const int chunks = 8;
-const int chunkloadingstart = 1;
+const int chunks = 125;
+const int chunkloadingstart = 2;
 
 const bool overwrite_saves = false;
 
 
-// Pool jobPool(4);
-
+Pool jobPool(8);
 
 
 SingleGame::SingleGame() {
@@ -42,37 +44,6 @@ SingleGame::SingleGame() {
 	generatedWorld.reserve(chunks);
 
  	generator = TerrainGenerator::plugnew(12345);
-
-	// Simple loop first.
-	// TODO: OPTIMIZE LOOP MAYBE?
-	int x = -chunkloadingstart;
-	int y = -chunkloadingstart;
-	int z = -chunkloadingstart;
-	for (int i = 0; i < chunks; i++) {
-		cout << "blah: " << i << endl;
-		cout << "x: " << x << " y: " << y << " z: " << z << endl;
-    // generatedWorld.emplace_back(ivec3(x, y, z)*worldsize, worldsize);
-		generatedWorld.push_back(BlockContainer(ivec3(x, y, z)*worldsize, worldsize));
-		if (x == chunkloadingstart) {
-			if (z == chunkloadingstart) {
-				if (y == chunkloadingstart) {
-					// Done
-				} else {
-					y++;
-					x = -chunkloadingstart;
-					z = -chunkloadingstart;
-				}
-			} else {
-				z++;
-				x = -chunkloadingstart;
-			}
-		} else {
-			x++;
-		}
-	}
-
-	nick = std::thread(&SingleGame::threadRenderJob, this);
-
 
 }
 
@@ -135,7 +106,6 @@ void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
 		if (stat(oss.str().c_str(), &buf) != 0) {
-			cout << "GENERATE" << endl;
 			generator->generate_chunk(bc.root());
 			std::ofstream outfile(oss.str(), std::ios::binary);
 			bc.root().to_file(outfile);
@@ -154,60 +124,61 @@ void SingleGame::setup_gameloop() {
 	cout << "starting test " << BDIMS << endl;
 	
 	double start = getTime();
-	TerrainGenerator* gen = TerrainGenerator::plugnew(12345);
-  cout << gen->get_height(ivec3(0,0,0)) << " get_height" << endl;
+  	cout << generator->get_height(ivec3(0,0,0)) << " get_height" << endl;
   
-	for (BlockContainer& bc : generatedWorld) {
-		std::ostringstream oss;
-		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
-		struct stat buf;
-		// If the file does not exist, create terrain.
-		// Otherwise, read from file.
-		if (stat(oss.str().c_str(), &buf) != 0 or overwrite_saves) {
-			gen->generate_chunk(bc.root());
-			std::ofstream outfile(oss.str(), std::ios::binary);
-			bc.to_file(outfile);
-			outfile.close();
-		} else {
-			std::ifstream t(oss.str().c_str(), std::ios::binary);
-			bc.from_file(t);
-		}
-	}
+	// for (BlockContainer& bc : generatedWorld) {
+	// 	jobPool.pushJob( [&] {
+	// 		loadOrGenerateTerrain(bc);
+	// 		renderer->render(bc.root(), graphics->blockbuf);
+	// 	});
+	// }
   
-	cout << getTime() - start << " Time terrain " << endl;
-	start = getTime();
+	// cout << getTime() - start << " Time terrain " << endl;
+	// start = getTime();
   
-	for (BlockContainer& bc : generatedWorld) {
-		
-		renderer->render(bc.root(), graphics->blockbuf);
-	}
   
 	cout << getTime() - start << " Time render " << endl;
 	
 	start = getTime();
 	int num = 0;
 
-	for (BlockContainer& bc : generatedWorld ) {
-		for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
-			num ++;
-		}
-	}
+	// for (BlockContainer& bc : generatedWorld ) {
+	// 	for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
+	// 		num ++;
+	// 	}
+	// }
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
+	nick = std::thread(&SingleGame::threadRenderJob, this);
+
 }
 
 
+struct ivec3Cmp {
+	bool operator()(const glm::ivec3& a, const glm::ivec3& b)const {
+			return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
+		}
+};
+
 void SingleGame::threadRenderJob() {
+	std::set<glm::ivec3, ivec3Cmp> isChunkLoading;
+	std::condition_variable cv;
 	while(true) {
-		vector<ivec3> chunksInRender = chunksInRenderDistance(spectator.position);
+		vector<ivec3> chunksInRender;
+		{
+		std::lock_guard lck(isChunkLoading_lock);
+
+		chunksInRender = chunksInRenderDistance(spectator.position);
 
 		// Loop for derendering.
+		// cout << generatedWorld.size() << endl;
 		for (int i = generatedWorld.size() - 1; i >= 0; i--) {
 			bool continueRendering = false;
 			for (int j = chunksInRender.size() - 1; j >= 0; j--) {
-				if (chunksInRender[j] == generatedWorld[i].globalpos) {
+				if (chunksInRender[j] == generatedWorld[i].globalpos || isChunkLoading.find(chunksInRender[j]) != isChunkLoading.end()) {
+					// cout << chunksInRender[j] << " " << generatedWorld[i].globalpos << endl;
 					continueRendering = true;
 					chunksInRender.erase(chunksInRender.begin() + j);
 					break;
@@ -216,23 +187,37 @@ void SingleGame::threadRenderJob() {
 
 			if (!continueRendering) {
 				renderer->derender(generatedWorld[i].root(), graphics->blockbuf);
-				generatedWorld.erase(generatedWorld.begin() + i);
+				generatedWorld.erase(generatedWorld.begin() + i-1);
+				// cout << generatedWorld.size() << endl;
 			}
 		}
 
 		// Loop for rendering and generating new chunks.
-		for (ivec3& pos : chunksInRender) {
-			BlockContainer bc = BlockContainer(pos, worldsize);
-			loadOrGenerateTerrain(bc);
+		for (const ivec3& pos : chunksInRender) {
+				
+			if (isChunkLoading.find(pos) == isChunkLoading.end()) {
+				isChunkLoading.insert(pos);
 
-			
-			renderer->render(bc.root(), graphics->blockbuf);
+				jobPool.pushJob([&isChunkLoading, pos, this] { 
+					{
+						BlockContainer bc(pos, worldsize);
+						loadOrGenerateTerrain(bc);
 
-			generatedWorld.push_back(std::move(bc));
+						renderer->render(bc.root(), graphics->blockbuf);
+						
+						std::lock_guard lck(isChunkLoading_lock);
+						generatedWorld.push_back(std::move(bc));
+						isChunkLoading.erase(pos);
+						// cout << "choms " <<isChunkLoading.size() << " " << generatedWorld.size() << " " << pos << endl;
+					}
+				});
+			}
+		}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
-}
+		
+	}
 
 void SingleGame::timestep() {
 	static double last_time = getTime();
@@ -254,8 +239,10 @@ void SingleGame::timestep() {
 	spectator.timestep(cur_time, deltatime);
 	graphics->viewbox->timestep(cur_time, deltatime);
 
+
 	graphics->swap();
-	
+	// std::cout << getTime() - t1 << std::endl;
+
 	playing = !controls->key_pressed('Q');
 
 	

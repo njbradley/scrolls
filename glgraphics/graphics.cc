@@ -38,8 +38,6 @@ int GLRenderBuf::add(const RenderData& data) {
 }
 
 void GLRenderBuf::edit(int index, const RenderData& data) {
- 
-
 	std::lock_guard guard(lock);
 	changes[index] = data;
 }
@@ -54,12 +52,27 @@ void GLRenderBuf::del(int index) {
 
 void GLRenderBuf::sync() {
 	lock.lock();
+		
+	double t1 = getTime();
+
+	glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
+	GLfloat* renderptr = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, databuffer);
+	GLfloat* dataptr = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 	for (std::pair<int,RenderData> change : changes) {
-		glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, change.first*sizeof(RenderPosData), sizeof(RenderPosData), change.second.posarr);
-		glBindBuffer(GL_ARRAY_BUFFER, databuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, change.first*sizeof(RenderFaceData), sizeof(RenderFaceData), change.second.facearr);
+		memcpy(((char*)renderptr) + change.first*sizeof(RenderPosData), change.second.posarr, sizeof(RenderPosData));
+		memcpy(((char*)dataptr) + change.first*sizeof(RenderFaceData), change.second.facearr, sizeof(RenderFaceData));
 	}
+
+
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+	glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+	// std::cout << getTime() - t1 << std::endl;
+
 	changes.clear();
 	lock.unlock();
 }
@@ -106,7 +119,6 @@ void myGlfwErrorFunc(int error_code, const char* str) {
 
 void GLGraphics::init_graphics() {
 //   glfwSetErrorCallback(myGlfwErrorFunc);
-	
   ASSERT_RUN(glfwInit());
   
 	glfwWindowHint(GLFW_SAMPLES, 4);
@@ -261,10 +273,12 @@ void GLGraphics::block_draw_call() {
 
 void GLGraphics::swap() {
 	block_draw_call();
+
   ((GLDebugLines*)debuglines)->draw_call();
 	
-	block_draw_call();
- 
+	blockbuf->sync(); 
+	
+
 
 	glfwSwapBuffers(window);
 	// ((GLRenderBuf*) blockbuf)->lock.unlock();

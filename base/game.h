@@ -8,6 +8,7 @@
 #include "player.h"
 
 #include <thread>
+#include <mutex>
 
 // Game is the main class that runs the whole game
 // setup_gameloop is called on the first frame, then timestep is called repeatedly
@@ -28,6 +29,9 @@ class SingleGame : public Game {
 	PLUGIN(SingleGame);
 public:
 	SingleGame();
+
+	std::mutex isChunkLoading_lock;
+	
 	virtual ~SingleGame();
 	
 	virtual void setup_gameloop();
@@ -44,6 +48,7 @@ protected:
 	Spectator spectator;
 	Controls* controls;
 	std::thread nick;
+	std::thread syncher;
 
 	void loadOrGenerateTerrain(BlockContainer& bc);
 	void threadRenderJob();
