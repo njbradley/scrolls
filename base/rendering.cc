@@ -57,7 +57,6 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 			// 	cout << data.facearr[int(dir)*2] << ' ';
 			// } cout << endl;
 			
-			visible = true;
 			if (visible) {
 				if (block->renderindex != -1) {
 					renderbuf->edit(block->renderindex, data);

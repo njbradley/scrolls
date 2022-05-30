@@ -228,7 +228,7 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 
 bool NodeView::moveto(ivec3 pos, int goalscale) {
 	IHitCube goalbox (pos, goalscale);
-	while (contains(goalbox)) {
+	while (!contains(goalbox)) {
     if (!step_up()) {
 			if (!goalbox.contains(*this) and node->container != nullptr) {
 				NodeView othernode = node->container->get_global(pos, goalscale);
