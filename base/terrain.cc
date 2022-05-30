@@ -340,12 +340,12 @@ void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
 	ShapeFunc shapes[] = {Shapes...};
 	gen_node(node, shapes, sizeof...(Shapes));
 	double time = getTime() - start;
-	cout << "generated " << node.globalpos << " in " << time << endl;
+	cout << "generated " << node.position << " in " << time << endl;
 }
 
 template <typename Layers, ShapeFunc ... Shapes>
 Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes) {
-	vec3 pos = vec3(node.globalpos) + float(node.scale)/2;
+	vec3 pos = vec3(node.position) + float(node.scale)/2;
 	
 	Blocktype blocktype;
 	ShapeContext context (seed, pos, layers.layers, layers.size);

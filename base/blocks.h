@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "entity.h"
+
 // Number of times a block splits
 #define BDIMS 2
 // BDIMS^3
@@ -78,16 +80,25 @@ struct Node {
 	union {
 		Node* parent = nullptr;
 		BlockContainer* container;
+		FreeNode* freecontainer;
 	};
 	union {
 		Node* children = nullptr;
 		Block* block;
 	};
+	FreeNode* freenode = nullptr;
 	uint32 flags = 0;
 	int lastval = 1;
-	
-	Node();
 };
+
+struct FreeNode : Node {
+	FreeNode* next = nullptr;
+	quat rotation;
+	vec3 offset;
+};
+	
+	
+	
 
 // struct that represents an index into
 // a inner node
@@ -109,20 +120,11 @@ struct NodeIndex {
 };
 	
 
-// class that allows reading/modifying
-// of the octree
-// A nodeview points to a position on the block tree, while
-// also keeping track of the current position and size of the
-// node pointed to. the view can be moved around by methods
-// like step_up/down/side or moveto
-// The node can also be modified using split/join and set methods
-class NodeView {
+class NodePtr {
 public:
-	ivec3 globalpos;
-	int scale;
 	
-	NodeView();
-	NodeView(Node* node, ivec3 gpos, int nscale);
+	NodePtr();
+	NodePtr(Node* node);
 	
 	// whether this view points to a real node
 	// default constructed NodeViews will return false,
@@ -137,7 +139,6 @@ public:
 	bool haschildren() const;
 	bool hasparent() const;
 	
-	IHitCube hitbox() const;
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
 	NodeIndex parentindex() const;
@@ -160,21 +161,9 @@ public:
 	bool step_side(NodeIndex pos);
 	
 	// returns a new view to the parent node
-	NodeView parent();
+	NodePtr parent() const;
 	// returns a new view to the child at the given index.
-	NodeView child(NodeIndex index);
-	// returns a view of the block at the given position
-	// if the position is outside of the root node of the tree,
-	// an invalid view is returned.
-	// if the position is inside the root node but there isnt
-	// a node with the given scale, the smallest node will be returned
-	// this means passing 1 as scale guarantees you will recieve a leaf node
-	NodeView get_global(ivec3 pos, int scale);
-	// behaves similar to get_global, this method will try to move
-	// the current view to the given position
-	// if the position is outside the root node, false is returned.
-	// the view will be left pointing at the root node
-	bool moveto(ivec3 pos, int scale);
+	NodePtr child(NodeIndex index) const;
 	
 	// turns a leaf node into an inner node, and
 	// creates 8 child nodes
@@ -204,18 +193,58 @@ public:
 	
 	// swaps the tree at the current node with the tree pointed to
 	// by other
-	void swap_tree(NodeView other);
+	void swap_tree(NodePtr other);
 	// deletes the current tree and copies the tree pointed to
 	// by other onto this node
-	void copy_tree(NodeView other);
+	void copy_tree(NodePtr other);
 	
-	bool operator==(const NodeView& other) const;
-	bool operator!=(const NodeView& other) const;
-// protected:
+	bool operator==(const NodePtr& other) const;
+	bool operator!=(const NodePtr& other) const;
+protected:
 	Node* node = nullptr;
 	
 	void copy_tree(Node* src, Node* dest);
 	void del_tree(Node* node);
+};
+
+
+
+// class that allows reading/modifying
+// of the octree
+// A nodeview points to a position on the block tree, while
+// also keeping track of the current position and size of the
+// node pointed to. the view can be moved around by methods
+// like step_up/down/side or moveto
+// The node can also be modified using split/join and set methods
+class NodeView : public NodePtr, public IHitCube {
+public:
+	
+	NodeView();
+	NodeView(NodePtr node, IHitCube cube);
+	NodeView(NodePtr node, ivec3 gpos, int nscale);
+	
+	// moves the view down, up, or sideways on the tree.
+	// returns true if the movement was successful.
+	bool step_down(NodeIndex pos);
+	bool step_up();
+	bool step_side(NodeIndex pos);
+	
+	// returns a new view to the parent node
+	NodeView parent() const;
+	// returns a new view to the child at the given index.
+	NodeView child(NodeIndex index) const;
+	// returns a view of the block at the given position
+	// if the position is outside of the root node of the tree,
+	// an invalid view is returned.
+	// if the position is inside the root node but there isnt
+	// a node with the given scale, the smallest node will be returned
+	// this means passing 1 as scale guarantees you will recieve a leaf node
+	NodeView get_global(ivec3 pos, int scale);
+	// behaves similar to get_global, this method will try to move
+	// the current view to the given position
+	// if the position is outside the root node, false is returned.
+	// the view will be left pointing at the root node
+	bool moveto(ivec3 pos, int scale);
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -278,7 +307,7 @@ public:
 	
 	void swap(BlockContainer& other);
 	
-	using NodeView::globalpos;
+	using NodeView::position;
 	using NodeView::scale;
 	
 	using NodeView::hasblock;
@@ -321,9 +350,15 @@ public:
 
 // INLINE FUNCTIONS
 
-inline Node::Node() {
-	block = nullptr;
+inline Block::Block() {
+	
 }
+
+inline Block::Block(int nvalue): value(nvalue) {
+	
+}
+
+
 
 inline constexpr NodeIndex::NodeIndex(int ind): index(ind) {
 	ASSERT(ind >= 0 and ind < BDIMS3);
@@ -355,53 +390,72 @@ inline constexpr int NodeIndex::z() const {
 
 
 
-
-
-inline bool NodeView::isvalid() const {
-	return scale >= 0;
+inline NodePtr::NodePtr(): node(nullptr) {
+	
 }
 
-inline bool NodeView::hasblock() const {
+inline NodePtr::NodePtr(Node* nnode): node(nnode) {
+	
+}
+
+inline bool NodePtr::isvalid() const {
+	return node != nullptr;
+}
+
+inline bool NodePtr::hasblock() const {
 	return !haschildren() and node->block != nullptr;
 }
 
-inline bool NodeView::haschildren() const {
+inline bool NodePtr::haschildren() const {
 	return node->flags & Block::CHILDREN_FLAG;
 }
 
-inline bool NodeView::hasparent() const {
-	// return node->parent != nullptr;
+inline bool NodePtr::hasparent() const {
 	return node->flags & Block::PARENT_FLAG;
 }
 
-inline bool NodeView::test_flag(uint32 flag) const {
+inline bool NodePtr::test_flag(uint32 flag) const {
 	return node->flags & flag;
 }
 
-inline NodeIndex NodeView::parentindex() const {
+inline NodeIndex NodePtr::parentindex() const {
 	return node - node->parent->children;
 }
 
-inline Block* NodeView::block() {
+inline Block* NodePtr::block() {
 	return node->block;
 }
 
-inline const Block* NodeView::block() const {
+inline const Block* NodePtr::block() const {
 	return node->block;
 }
 
-inline void NodeView::invalidate() {
-	scale = -1;
+inline void NodePtr::invalidate() {
 	node = nullptr;
 }
 
-inline bool NodeView::operator==(const NodeView& other) const {
+inline bool NodePtr::operator==(const NodePtr& other) const {
 	return node == other.node;
 }
 
-inline bool NodeView::operator!=(const NodeView& other) const {
+inline bool NodePtr::operator!=(const NodePtr& other) const {
 	return !(*this == other);
 }
+
+
+
+inline NodeView::NodeView() {
+	
+}
+
+inline NodeView::NodeView(NodePtr node, IHitCube cube): NodePtr(node), IHitCube(cube) {
+	
+}
+
+inline NodeView::NodeView(NodePtr node, ivec3 position, int scale): NodePtr(node), IHitCube(position, scale) {
+	
+}
+
 
 
 

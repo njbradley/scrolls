@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 using std::istream;
 using std::ostream;
@@ -17,6 +18,7 @@ using glm::vec3;
 using glm::ivec3;
 using glm::vec2;
 using glm::ivec2;
+using glm::quat;
 
 using uint8 = uint8_t;
 using uint16 = uint16_t;
@@ -31,7 +33,10 @@ using int64 = int64_t;
 using uint = unsigned int;
 
 class Node;
+class FreeNode;
+class NodePtr;
 class NodeView;
+class FreeNodeView;
 class NodeIter;
 class Block;
 class BlockView;

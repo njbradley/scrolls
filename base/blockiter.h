@@ -4,6 +4,40 @@
 #include "common.h"
 #include "blocks.h"
 
+// template <typename NodePtrT, typename Inherited = NodeIter<NodePtrT>>
+// class NodeIter {
+// 	NodePtrT curnode;
+// 	int max_scale;
+//
+// 	NodeIter(NodePtrT& node);
+//
+// 	virtual NodeIndex increment_func(NodeIndex index);
+//
+// 	void step_down(NodePtrT node);
+// 	void step_side(NodePtrT node);
+// 	void get_safe(NodePtrT node);
+//
+// 	virtual bool valid_tree(NodePtrT node);
+// 	virtual bool valid_node(NodePtrT node);
+//
+// 	bool operator!=(const NodeIter<NodePtrT>& other);
+//
+// 	Inherited begin() const;
+// 	Inherited end() const;
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
 template <typename Iterator>
 class BlockIterable {
 public:

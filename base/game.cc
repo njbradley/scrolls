@@ -36,7 +36,7 @@ Chunk::Chunk(SingleGame* newgame, ivec3 pos, int scale): game(newgame), BlockCon
 
 BlockContainer* Chunk::find_neighbor(ivec3 pos, int goalscale) {
   for (Chunk& chunk : game->generatedWorld) {
-    if (chunk.hitbox().contains(IHitCube(pos, goalscale))) {
+    if (chunk.contains(IHitCube(pos, goalscale))) {
       return &chunk;
     }
   }
@@ -103,7 +103,7 @@ void SingleGame::setup_gameloop() {
   
 	for (BlockContainer& bc : generatedWorld) {
 		std::ostringstream oss;
-		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
+		oss << "./world/chunks/" << bc.position.x << "x" << bc.position.y << "y" << bc.position.z << "z" << worldsize << ".txt";
 		struct stat buf;
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
