@@ -6,6 +6,7 @@
 #include "terrain.h"
 #include "threadpool/pool.h"
 #include "debug.h"
+#include "entity.h"
 
 #include <set>
 #include <sstream>
@@ -24,16 +25,35 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 32;
+const int worldsize = 256;
 
-const int renderdistance = 32;
-const int chunks = 125;
-const int chunkloadingstart = 2;
+const int renderdistance = 256;  // FIX THIS VARIABLE NAME
+const int chunkloadingstart = 4;
+
+const int chunks = (2*chunkloadingstart + 1) * (2*chunkloadingstart + 1) *(2*chunkloadingstart + 1);
 
 const bool overwrite_saves = false;
 
 
-Pool jobPool(8);
+Pool jobPool(16);
+
+
+Chunk::Chunk(SingleGame* newgame, ivec3 pos, int scale): game(newgame), BlockContainer(pos,scale) {
+  
+}
+
+BlockContainer* Chunk::find_neighbor(ivec3 pos, int goalscale) {
+  for (Chunk& chunk : game->generatedWorld) {
+    if (chunk.hitbox().contains(IHitCube(pos, goalscale))) {
+      return &chunk;
+    }
+  }
+  return nullptr;
+}
+
+
+
+
 
 
 SingleGame::SingleGame() {
@@ -77,6 +97,8 @@ vector<ivec3> chunksInRenderDistance(vec3 playerPos) {
 	vector<ivec3> newChunks = vector<ivec3>();
 	for (int i = 0; i < chunks; i++) {
 		newChunks.push_back(ivec3(playerPos.x - x_rem, playerPos.y - y_rem, playerPos.z - z_rem) + (ivec3(x,y,z)*worldsize));
+		// generatedWorld.push_back(Chunk(this, ivec3(x, y, z)*worldsize, worldsize));
+
 		if (x == chunkloadingstart) {
 			if (z == chunkloadingstart) {
 				if (y == chunkloadingstart) {
@@ -200,7 +222,7 @@ void SingleGame::threadRenderJob() {
 
 				jobPool.pushJob([&isChunkLoading, pos, this] { 
 					{
-						BlockContainer bc(pos, worldsize);
+						Chunk bc(this, pos, worldsize);
 						loadOrGenerateTerrain(bc);
 
 						renderer->render(bc.root(), graphics->blockbuf);
@@ -214,7 +236,7 @@ void SingleGame::threadRenderJob() {
 			}
 		}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	}
 		
 	}

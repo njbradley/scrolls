@@ -44,6 +44,10 @@ class Renderer;
 class TerrainGenerator;
 class TerrainDecorator;
 class TerrainShape;
+class IHitCube;
+class Game;
+class Chunk;
+class SingleGame;
 
 
 

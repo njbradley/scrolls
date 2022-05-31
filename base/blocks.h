@@ -75,7 +75,10 @@ struct Block {
 };
 
 struct Node {
-	Node* parent = nullptr;
+	union {
+		Node* parent = nullptr;
+		BlockContainer* container;
+	};
 	union {
 		Node* children = nullptr;
 		Block* block;
@@ -134,6 +137,7 @@ public:
 	bool haschildren() const;
 	bool hasparent() const;
 	
+	IHitCube hitbox() const;
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
 	NodeIndex parentindex() const;
@@ -281,7 +285,6 @@ public:
 	using NodeView::haschildren;
 	using NodeView::block;
 	using NodeView::child;
-	using NodeView::get_global;
 	using NodeView::split;
 	using NodeView::join;
 	using NodeView::test_flag;
@@ -291,6 +294,9 @@ public:
 	using NodeView::swap_block;
 	using NodeView::from_file;
 	using NodeView::to_file;
+	
+	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);
+	NodeView get_global(ivec3 pos, int goal_scale);
 	
 	NodeView root() const;
 };

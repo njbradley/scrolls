@@ -9,6 +9,14 @@
 
 #include <thread>
 #include <mutex>
+class Chunk : public BlockContainer {
+public:
+	SingleGame* game;
+	
+	Chunk(SingleGame* newgame, ivec3 pos, int scale);
+	
+	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);
+};
 
 // Game is the main class that runs the whole game
 // setup_gameloop is called on the first frame, then timestep is called repeatedly
@@ -43,7 +51,7 @@ protected:
 	TerrainGenerator* generator;
 
 	// Allocate on the heap because we want to change render distance.
-	vector<BlockContainer> generatedWorld;
+	vector<Chunk> generatedWorld;
 
 	Spectator spectator;
 	Controls* controls;
@@ -52,6 +60,9 @@ protected:
 
 	void loadOrGenerateTerrain(BlockContainer& bc);
 	void threadRenderJob();
+	
+	friend class Chunk;
 };
+
 
 #endif
