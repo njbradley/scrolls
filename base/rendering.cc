@@ -11,7 +11,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	bool changed = false;
 	
 	// for (BlockView block : BlockIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
-	for (NodeView& node : BlockIterable<FlagNodeIter>(mainblock, Block::RENDER_FLAG)) {
+	for (NodeView& node : BlockIterable<FlagNodeIter<NodeView>>(mainblock, Block::RENDER_FLAG)) {
 		node.reset_flag(Block::RENDER_FLAG);
 		if (node.haschildren()) continue;
 		BlockView block = node;
@@ -33,7 +33,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 				// cout << "  going to " << block.position + ivec3(dir) * block.scale << endl;
 				// cout << "  SIDENODE " << sidenode.position << ' ' << sidenode.scale << endl;
 				if (sidenode.isvalid()) {
-					for (BlockView sideblock : BlockIterable<DirBlockIter>(sidenode, -ivec3(dir))) {
+					for (BlockView sideblock : BlockIterable<DirBlockIter<NodeView>>(sidenode, -ivec3(dir))) {
 						// cout << "    SIDEBLOCK " << sideblock.position << ' ' << sideblock.scale << endl;
 						if (sideblock->value == 0) {
 							data.facedata.faces[dir].texture = block->value;

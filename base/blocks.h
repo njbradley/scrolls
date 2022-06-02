@@ -150,6 +150,9 @@ public:
 	Block* block();
 	const Block* block() const;
 	
+	BlockContainer* container();
+	FreeNode* freecontainer();
+	
 	// turns the current view into an invaid instance
 	// basically the same as node = NodeView()
 	void invalidate();
@@ -222,6 +225,7 @@ public:
 	NodeView();
 	NodeView(NodePtr node, IHitCube cube);
 	NodeView(NodePtr node, ivec3 gpos, int nscale);
+	// explicit NodeView(NodePtr node);
 	
 	// moves the view down, up, or sideways on the tree.
 	// returns true if the movement was successful.
@@ -247,6 +251,15 @@ public:
 	bool moveto(ivec3 pos, int scale);
 };
 
+
+class FreeNodeView : public NodeView {
+	FreeNode* freecontainer = nullptr;
+	
+	FreeNodeView();
+	FreeNodeView(const NodeView& node, FreeNode* freecont);
+	explicit FreeNodeView(const NodeView& node);
+};
+
 // BlockView is a more specific NodeView that is restricted
 // to only leaf nodes. If constructed with a non leaf NodeView
 // step_down is called until a block is found.
@@ -265,32 +278,6 @@ protected:
 	
 	using NodeView::join;
 	using NodeView::split;
-};
-
-class NodeIter : public NodeView {
-public:
-	NodeIter(const NodeView& view);
-	
-	NodeIter operator++();
-	NodeView& operator*();
-	
-	int max_scale = -1;
-		
-	// the start and end point for iterating inside a single block
-  virtual NodeIndex startpos();
-  virtual NodeIndex endpos();
-	virtual NodeIndex increment_func(NodeIndex pos);
-	
-	void step_down();
-	void step_side();
-	void get_safe();
-	
-	// is the current node and all of its children valid
-	virtual bool valid_tree() const;
-	// is only the the current node valid
-	virtual bool valid_node() const;
-	
-	virtual void finish();
 };
 	
 
@@ -430,6 +417,14 @@ inline const Block* NodePtr::block() const {
 	return node->block;
 }
 
+inline BlockContainer* NodePtr::container() {
+	return node->container;
+}
+
+inline FreeNode* NodePtr::freecontainer() {
+	return node->freecontainer;
+}
+
 inline void NodePtr::invalidate() {
 	node = nullptr;
 }
@@ -467,36 +462,6 @@ inline NodeView BlockView::nodeview() const {
 	return *this;
 }
 
-
-inline NodeIndex NodeIter::startpos() {
-	return NodeIndex(0);
-}
-
-inline NodeIndex NodeIter::endpos() {
-	return NodeIndex(BDIMS3-1);
-}
-
-inline NodeIndex NodeIter::increment_func(NodeIndex pos) {
-	return int(pos) + 1;
-}
-
-// is the current node and all of its children valid
-inline bool NodeIter::valid_tree() const {
-	return true;
-}
-
-// is only the the current node valid
-inline bool NodeIter::valid_node() const {
-	return true;
-}
-
-inline void NodeIter::finish() {
-	invalidate();
-}
-
-inline NodeView& NodeIter::operator*() {
-	return *this;
-}
 
 
 

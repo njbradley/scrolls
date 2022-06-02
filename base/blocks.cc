@@ -93,29 +93,29 @@ Block* NodePtr::swap_block(Block* block) {
 }
 
 void NodePtr::from_file(istream& ifile) {
-	// for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
-	// 	if (ifile.peek() == '{') {
-	// 		ifile.get();
-	// 		curnode.split();
-	// 	} else if (ifile.peek() == '~') {
-	// 		ifile.get();
-	// 		curnode.set_block(nullptr);
-	// 	} else {
-	// 		curnode.set_block(new Block(ifile.get()));
-	// 	}
-	// }
+	for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
+		if (ifile.peek() == '{') {
+			ifile.get();
+			curnode.split();
+		} else if (ifile.peek() == '~') {
+			ifile.get();
+			curnode.set_block(nullptr);
+		} else {
+			curnode.set_block(new Block(ifile.get()));
+		}
+	}
 }
 
 void NodePtr::to_file(ostream& ofile) {
-	// for (NodeView curnode : BlockIterable<NodeIter>(*this)) {
-	// 	if (curnode.haschildren()) {
-	// 		ofile.put('{');
-	// 	} else if (curnode.hasblock()) {
-	// 		ofile.put(curnode.node->block->value);
-	// 	} else {
-	// 		ofile.put('~');
-	// 	}
-	// }
+	for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
+		if (curnode.haschildren()) {
+			ofile.put('{');
+		} else if (curnode.hasblock()) {
+			ofile.put(curnode.block()->value);
+		} else {
+			ofile.put('~');
+		}
+	}
 }
 
 void NodePtr::copy_tree(Node* src, Node* dest) {
@@ -169,9 +169,20 @@ void NodePtr::del_tree(Node* node) {
 
 
 
+NodeView get_from_ptr(NodePtr node) {
+	if (node.hasparent()) {
+		NodeIndex index = node.parentindex();
+		NodeView view = get_from_ptr(node.parent());
+		view.step_down(index);
+		return view;
+	} else {
+		return node.container()->root();
+	}
+}
 
-
-
+// NodeView::NodeView(NodePtr node): NodeView(get_from_ptr(node)) {
+//
+// }
 
 bool NodeView::step_down(NodeIndex pos) {
 	if (haschildren()) {
@@ -259,7 +270,6 @@ bool NodeView::moveto(ivec3 pos, int goalscale) {
 
 
 
-
 BlockView::BlockView() {
 	
 }
@@ -283,51 +293,7 @@ BlockView::BlockView(const NodeView& view): NodeView(view) {
 
 
 
-NodeIter::NodeIter(const NodeView& view): NodeView(view), max_scale(view.scale) {
-	
-}
 
-
-void NodeIter::step_down() {
-	// cout << "step down " << position << ' ' << scale << endl;
-	if (haschildren()) {
-		NodeView::step_down(startpos());
-		get_safe();
-	} else {
-		step_side();
-	}
-}
-
-void NodeIter::step_side() {
-	// cout << "step side " << position << ' ' << scale << endl;
-	if (!hasparent() or scale >= max_scale) {
-		finish();
-	} else if (parentindex() == endpos()) {
-		step_up();
-		step_side();
-	} else {
-		NodeView::step_side(increment_func(parentindex()));
-		get_safe();
-	}
-}
-
-void NodeIter::get_safe() {
-	// cout << "get safe " << position << ' ' << scale << endl;
-	if (!valid_tree()) {
-		// cout << "invalid tree" << endl;
-		step_side();
-	} else if (!valid_node()) {
-		// cout << "invalid node" << endl;
-		step_down();
-	}
-}
-
-NodeIter NodeIter::operator++() {
-	if (isvalid()) {
-		step_down();
-	}
-	return *this;
-}
 
 
 

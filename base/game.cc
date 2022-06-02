@@ -20,12 +20,12 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 32;
+const int worldsize = 256;
 
 const int renderdistance = 2;
 const int chunks = 8;
 
-const bool overwrite_saves = true;
+const bool overwrite_saves = false;
 
 
 
@@ -131,12 +131,21 @@ void SingleGame::setup_gameloop() {
 	int num = 0;
 
 	for (BlockContainer& bc : generatedWorld ) {
-		for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
+		for (BlockView view : BlockIterable<BlockIter<NodeView>>(bc.root())) {
 			num ++;
 		}
 	}
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
+  start = getTime();
+  num = 0;
+  for (BlockContainer& bc : generatedWorld ) {
+		for (NodePtr node : BlockIterable<BlockIter<NodePtr>>(bc.root())) {
+			num ++;
+		}
+	}
+  cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+  
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
 }
