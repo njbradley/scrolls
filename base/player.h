@@ -25,7 +25,7 @@ class Controls { public:
 // simple player class, has no physics and
 // flies around
 class Spectator { public:
-	vec3 position = vec3(0,0,0);
+	vec3 position = vec3(-256,-256,-1280);
 	vec2 angle = vec2(0,0);
 	Controls* controller = nullptr;
 	

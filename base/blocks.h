@@ -330,6 +330,7 @@ inline constexpr NodeIndex::NodeIndex(int ind): index(ind) {
 }
 
 inline constexpr NodeIndex::NodeIndex(ivec3 pos): index(pos.x*BDIMS*BDIMS + pos.y*BDIMS + pos.z) {
+	// std::cout << pos << std::endl;
 	ASSERT(pos.x < BDIMS and pos.x >= 0 and pos.y < BDIMS and pos.y >= 0 and pos.z < BDIMS and pos.z >= 0);
 }
 

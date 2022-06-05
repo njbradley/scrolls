@@ -269,6 +269,7 @@ void NodeIter::step_side() {
 		step_up();
 		step_side();
 	} else {
+		// std::cout << ivec3(parentindex()) << " dnawodniowa " << ivec3(endpos()) << std::endl;
 		NodeView::step_side(increment_func(parentindex()));
 		get_safe();
 	}

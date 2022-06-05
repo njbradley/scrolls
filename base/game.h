@@ -60,6 +60,7 @@ protected:
 
 	void loadOrGenerateTerrain(BlockContainer& bc);
 	void threadRenderJob();
+	bool chunkStillValid(vec3 chunkPos);
 	
 	friend class Chunk;
 };

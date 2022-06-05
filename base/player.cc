@@ -44,6 +44,13 @@ void Spectator::timestep(float curtime, float deltatime) {
 	// Up vector
 	glm::vec3 up = glm::cross( right, forward );
 	
+
+	if(controller->key_pressed(controller->KEY_CTRL)) {
+		nspeed = 64;
+	} else {
+		nspeed = 8;
+	}
+
 	if (controller->key_pressed('W')){
 		position += forward * deltatime * nspeed;
 	}
@@ -65,4 +72,6 @@ void Spectator::timestep(float curtime, float deltatime) {
 	if (controller->key_pressed(controller->KEY_SHIFT)){
 		position -= up * deltatime * nspeed;
 	}
+
+
 }
