@@ -8,7 +8,7 @@ DEFINE_PLUGIN(Renderer);
 EXPORT_PLUGIN(DefaultRenderer);
 
 void DefaultRenderer::derender(NodeView nv, RenderBuf* renderbuf) {
-	for (BlockView block : BlockIterable<BlockIter>(nv)) {
+	for (BlockView block : BlockIterable<BlockIter<NodeView>>(nv)) {
 		if (block->renderindex != -1) {
 			renderbuf->del(block->renderindex);
 		}

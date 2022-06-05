@@ -235,7 +235,7 @@ void SingleGame::threadRenderJob() {
 			for (int i = generatedWorld.size() - 1; i >= 0; i--) {
 				bool continueRendering = false;
 				for (int j = chunksInRender.size() - 1; j >= 0; j--) {
-					if (chunksInRender[j] == generatedWorld[i].globalpos || isChunkLoading.find(chunksInRender[j]) != isChunkLoading.end()) {
+					if (chunksInRender[j] == generatedWorld[i].position || isChunkLoading.find(chunksInRender[j]) != isChunkLoading.end()) {
 						// cout << chunksInRender[j] << " " << generatedWorld[i].globalpos << endl;
 						continueRendering = true;
 						chunksInRender.erase(chunksInRender.begin() + j);
