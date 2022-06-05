@@ -10,6 +10,7 @@ struct IHitCube {
 	ivec3 position;
 	int scale;
 	
+	IHitCube();
 	IHitCube(ivec3 pos, int nscale);
 	
 	// A point is contained if it is inside the box or on the edge
@@ -31,6 +32,10 @@ struct IHitCube {
 
 
 ///// INLINE FUNCTIONS
+
+inline IHitCube::IHitCube() {
+	
+}
 
 inline IHitCube::IHitCube(ivec3 pos, int nscale): position(pos), scale(nscale) {
 	

@@ -46,7 +46,7 @@ Chunk::Chunk(SingleGame* newgame, ivec3 pos, int scale): game(newgame), BlockCon
 
 BlockContainer* Chunk::find_neighbor(ivec3 pos, int goalscale) {
   for (Chunk& chunk : game->generatedWorld) {
-    if (chunk.hitbox().contains(IHitCube(pos, goalscale))) {
+    if (chunk.contains(IHitCube(pos, goalscale))) {
       return &chunk;
     }
   }
@@ -149,7 +149,7 @@ vector<ivec3> chunksInRenderDistance(vec3 playerPos) {
 
 void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 		std::ostringstream oss;
-		oss << "./world/chunks/" << bc.globalpos.x << "x" << bc.globalpos.y << "y" << bc.globalpos.z << "z" << worldsize << ".txt";
+		oss << "./world/chunks/" << bc.position.x << "x" << bc.position.y << "y" << bc.position.z << "z" << worldsize << ".txt";
 		struct stat buf;
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
@@ -190,13 +190,22 @@ void SingleGame::setup_gameloop() {
 	start = getTime();
 	int num = 0;
 
-	// for (BlockContainer& bc : generatedWorld ) {
-	// 	for (BlockView view : BlockIterable<BlockIter>(bc.root())) {
-	// 		num ++;
-	// 	}
-	// }
+	for (BlockContainer& bc : generatedWorld ) {
+		for (BlockView view : BlockIterable<BlockIter<NodeView>>(bc.root())) {
+			num ++;
+		}
+	}
 	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
+  start = getTime();
+  num = 0;
+  for (BlockContainer& bc : generatedWorld ) {
+		for (NodePtr node : BlockIterable<BlockIter<NodePtr>>(bc.root())) {
+			num ++;
+		}
+	}
+  cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+  
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);
 	nick = std::thread(&SingleGame::threadRenderJob, this);

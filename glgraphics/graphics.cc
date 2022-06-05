@@ -117,6 +117,14 @@ void myGlfwErrorFunc(int error_code, const char* str) {
   std::cerr << "GLFW error (" << error_code << ") '" << str << "'" << endl;
 }
 
+bool update_window_size = false;
+int new_width, new_height;
+void window_size_callback(GLFWwindow* window, int width, int height) {
+  new_width = width;
+  new_height = height;
+  update_window_size = true;
+}
+
 void GLGraphics::init_graphics() {
 //   glfwSetErrorCallback(myGlfwErrorFunc);
   ASSERT_RUN(glfwInit());
@@ -128,10 +136,16 @@ void GLGraphics::init_graphics() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
   
+  GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+  const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+  
+  screen_dims.x = mode->width*6/8;
+  screen_dims.y = mode->height*6/8;
+  
 	window = glfwCreateWindow(screen_dims.x, screen_dims.y, "Scrolls - An Adventure Game", nullptr, nullptr);
 	static_window = window;
 	ASSERT(window != nullptr);
-	glfwSetWindowPos(window, 100, 40);
+	// glfwSetWindowPos(window, 100, 40);
 	
   glfwMakeContextCurrent(window);
 	
@@ -146,6 +160,8 @@ void GLGraphics::init_graphics() {
   // Hide the mouse and enable unlimited mouvement
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	
+  glfwSetWindowSizeCallback(window, window_size_callback);
+  
 	// Set the mouse at the center of the screen
   glfwPollEvents();
   glfwSetCursorPos(window, screen_dims.x/2, screen_dims.y/2);
@@ -272,6 +288,13 @@ void GLGraphics::block_draw_call() {
 }
 
 void GLGraphics::swap() {
+  
+  if (update_window_size) {
+    screen_dims.x = new_width;
+    screen_dims.y = new_height;
+    glViewport(0, 0, screen_dims.x, screen_dims.y);
+  }
+  
 	block_draw_call();
 
   ((GLDebugLines*)debuglines)->draw_call();
