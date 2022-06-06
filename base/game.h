@@ -53,4 +53,25 @@ protected:
 };
 
 
+class SingleTreeGame : public Game {
+	PLUGIN(SingleTreeGame);
+public:
+	SingleTreeGame();
+	virtual ~SingleTreeGame();
+	
+	virtual void setup_gameloop();
+	virtual void timestep();
+protected:
+	GraphicsContext* graphics;
+	Renderer* renderer;
+	TerrainGenerator* generator;
+	
+	BlockContainer world;
+	
+	Spectator spectator;
+	Controls* controls;
+};
+
+
+
 #endif

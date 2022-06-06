@@ -13,6 +13,8 @@ struct IHitCube {
 	IHitCube();
 	IHitCube(ivec3 pos, int nscale);
 	
+	ivec3 midpoint() const;
+	
 	// A point is contained if it is inside the box or on the edge
 	bool contains(ivec3 point) const;
 	// a box is contained when no part of it extends outside the box
@@ -54,6 +56,10 @@ inline IHitCube::IHitCube() {
 
 inline IHitCube::IHitCube(ivec3 pos, int nscale): position(pos), scale(nscale) {
 	
+}
+
+inline ivec3 midpoint() const {
+	return position + scale/2;
 }
 
 inline bool IHitCube::contains(ivec3 point) const {

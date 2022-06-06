@@ -20,7 +20,7 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 256;
+const int worldsize = 64;
 
 const int renderdistance = 2;
 const int chunks = 8;
@@ -169,4 +169,90 @@ void SingleGame::timestep() {
 	graphics->swap();
 	playing = !controls->key_pressed('Q');
 	// cout << spectator.position << ' ' << spectator.angle.x << ',' << spectator.angle.y << endl;
+}
+
+
+
+
+
+
+const int loading_resolution = worldsize/2;
+
+EXPORT_PLUGIN(SingleTreeGame);
+
+
+SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize, -worldsize, -worldsize), worldsize*2) {
+	graphics = GraphicsContext::plugnew();
+	renderer = Renderer::plugnew();
+	controls = Controls::plugnew();
+  generator = TerrainGenerator::plugnew(12345);
+}
+
+SingleTreeGame::~SingleTreeGame() {
+  plugdelete(generator);
+  plugdelete(controls);
+  plugdelete(renderer);
+  plugdelete(graphics);
+}
+
+
+void SingleTreeGame::setup_gameloop() {
+	
+	cout << "starting test " << BDIMS << endl;
+	
+	double start = getTime();
+  cout << generator->get_height(ivec3(0,0,0)) << " get_height" << endl;
+  
+  generator->generate_chunk(world.root());
+  
+	cout << getTime() - start << " Time terrain " << endl;
+	start = getTime();
+  
+	renderer->render(world.root(), graphics->blockbuf);
+  
+	cout << getTime() - start << " Time render " << endl;
+	
+	start = getTime();
+	int num = 0;
+  
+  for (BlockView view : BlockIterable<BlockIter<NodeView>>(world.root())) {
+		num ++;
+	}
+	
+  cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+	
+  start = getTime();
+  num = 0;
+	for (NodePtr node : BlockIterable<BlockIter<NodePtr>>(world.root())) {
+		num ++;
+	}
+  cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+  
+	spectator.controller = controls;
+	graphics->set_camera(&spectator.position, &spectator.angle);
+}
+
+// void check_loading() {
+//   IHitCube goalbox (world.root().midpoint() - loading_resolution/2, loading_resolution/2)
+//   if (!goalbox.contains(spectator.position)) {
+//     ivec3 rolldir = glm::sign(
+
+void SingleTreeGame::timestep() {
+	static double last_time = getTime();
+	double cur_time = getTime();
+	double deltatime = cur_time - last_time;
+	last_time = cur_time;
+	
+  std::stringstream debugstr;
+  debugstr << "FPS: " << 1 / deltatime << endl;
+  debugstr << "spectatorpos: " << spectator.position << endl;
+  debugstr << "abcdefghijklmnopqrstuvwxyz" << endl;
+  debugstr << "1234567890 [({<()>})]" << endl;
+  debuglines->clear();
+  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
+  
+	spectator.timestep(cur_time, deltatime);
+	graphics->viewbox->timestep(cur_time, deltatime);
+	graphics->swap();
+	playing = !controls->key_pressed('Q');
 }
