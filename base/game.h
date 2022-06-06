@@ -9,6 +9,8 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
+
 class Chunk : public BlockContainer {
 public:
 	SingleGame* game;
@@ -56,7 +58,7 @@ protected:
 	Spectator spectator;
 	Controls* controls;
 	std::thread nick;
-	std::thread syncher;
+	std::atomic<bool> run_thread = true;
 
 	void loadOrGenerateTerrain(BlockContainer& bc);
 	void threadRenderJob();

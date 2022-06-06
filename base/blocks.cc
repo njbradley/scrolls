@@ -154,7 +154,7 @@ void NodePtr::copy_tree(Node* src, Node* dest) {
 			dest->children[i].parent = dest;
 		}
 	} else if (src->block != nullptr) {
-		dest->block = new Block(*node->block);
+		dest->block = new Block(*src->block);
 	}
 }
 

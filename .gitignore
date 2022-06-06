@@ -1,2 +1,4 @@
-obj/
+/obj/
 scrolls
+/world/
+/cores/

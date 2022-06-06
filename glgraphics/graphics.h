@@ -12,13 +12,13 @@ class GLRenderBuf : public RenderBuf {
 public:
 	GLuint posbuffer;
 	GLuint databuffer;
-	int num_points = 0;
-	int allocated_space = 0;
-	vector<int> empties;
-	std::unordered_map<int,RenderData> changes;
+	vector<RenderPosData> posdata;
+	vector<RenderFaceData> facedata;
+	int first_empty = -1;
+	bool changed = false;
 	std::mutex lock;
 
-	void set_buffers(GLuint verts, GLuint databuf, int start_size);
+	void set_buffers(GLuint verts, GLuint databuf);
 	virtual int add(const RenderData& data);
 	virtual void edit(int index, const RenderData& data);
 	virtual void del(int index);

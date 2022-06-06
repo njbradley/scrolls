@@ -250,11 +250,18 @@ void plugdelete(T* ptr) {
 	ptr->get_plugindef()->delfunc(ptr);
 }
 
+struct PluginReq {
+	PluginId baseplugin;
+	PluginId reqplugin;
+};
+
 class PluginLoader {
 public:
+	vector<PluginReq> requirements;
 	PluginLoader();
-	void load();
+	void load(int numargs, char** args);
 	void choose_plugins();
+	void parse_request(string request);
 	
 	string find_path(string search_path);
 };
@@ -277,7 +284,17 @@ extern PluginLoader pluginloader;
 template <typename BaseType>
 void choose_plugin() {
 	cout << "Choosing plugin " << BaseType::plugindef()->id << " = ";
-	BaseType::selected_plugin = BaseType::plugindef()->find_deepest();
+	PluginDef<BaseType> *chosen_def = BaseType::plugindef();
+	for (PluginReq& req : pluginloader.requirements) {
+		if (req.baseplugin == BaseType::plugindef()->id) {
+			chosen_def = chosen_def->find(req.reqplugin);
+			if (chosen_def == nullptr) {
+				cant_find_plugin_error(req.baseplugin, req.reqplugin);
+			}
+			break;
+		}
+	}
+	BaseType::selected_plugin = chosen_def->find_deepest();
 	if (BaseType::selected_plugin != nullptr) {
 		cout << BaseType::selected_plugin->id << endl;
 	} else {
@@ -294,7 +311,7 @@ PluginDef<BaseType>* PluginDef<BaseType>::find(PluginId search_id) {
 	if (children != nullptr) {
 		result = children->find(search_id);
 	}
-	if (result != nullptr and next != nullptr) {
+	if (result == nullptr and next != nullptr) {
 		result = next->find(search_id);
 	}
 	return result;

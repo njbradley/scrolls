@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <functional>
+#include <condition_variable>
 
 class Pool {
 

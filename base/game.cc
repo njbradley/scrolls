@@ -13,7 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <thread> 
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <map>
@@ -23,6 +23,7 @@
 DEFINE_PLUGIN(Game);
 
 
+EXPORT_PLUGIN(SingleTreeGame);
 EXPORT_PLUGIN(SingleGame);
 
 const int worldsize = 64;
@@ -37,7 +38,7 @@ const bool overwrite_saves = false;
 const bool multi_thread_loading_chunks = true;
 
 
-Pool jobPool(16);
+Pool* jobPool;
 
 
 Chunk::Chunk(SingleGame* newgame, ivec3 pos, int scale): game(newgame), BlockContainer(pos,scale) {
@@ -62,6 +63,7 @@ SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
+  jobPool = new Pool(4);
 
 	generatedWorld.reserve(chunks);
 
@@ -70,6 +72,10 @@ SingleGame::SingleGame() {
 }
 
 SingleGame::~SingleGame() {
+  run_thread = false;
+  nick.join();
+  delete jobPool;
+  
 	plugdelete(graphics);
 	plugdelete(renderer);
 	plugdelete(controls);
@@ -160,7 +166,7 @@ void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 			bc.root().to_file(outfile);
 			outfile.close();
 		} else {
-			std::ifstream t(oss.str().c_str(), std::ios::binary);	
+			std::ifstream t(oss.str().c_str(), std::ios::binary);
 			bc.root().from_file(t);
 			// cout << "LOAD " << oss.str().c_str() << endl;
 			
@@ -215,7 +221,7 @@ void SingleGame::setup_gameloop() {
 
 
 void SingleGame::threadRenderJob() {
-	while(true) {
+	while(run_thread) {
 		vector<ivec3> chunksInRender;
 		{
 			std::lock_guard lck(isChunkLoading_lock);
@@ -239,10 +245,10 @@ void SingleGame::threadRenderJob() {
 				}
 			}
 
-			// Loop for rendering and generating new chunks.	
+			// Loop for rendering and generating new chunks.
 			for (const ivec3& pos : chunksInRender) {
 				if (multi_thread_loading_chunks) {
-						jobPool.pushJob([pos, this] { 
+						jobPool->pushJob([pos, this] {
 							{
 								if (SingleGame::chunkStillValid(pos)) {
 									Chunk bc(this, pos, worldsize);
@@ -265,10 +271,10 @@ void SingleGame::threadRenderJob() {
 				}
 			}
 		}
+    if (!run_thread) return;
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
-		
-	}
+}
 
 void SingleGame::timestep() {
 	static double last_time = getTime();
@@ -282,22 +288,21 @@ void SingleGame::timestep() {
   std::stringstream debugstr;
   debugstr << "FPS: " << 1 / deltatime << endl;
   debugstr << "spectatorpos: " << spectator.position << endl;
-  debugstr << "abcdefghijklmnopqrstuvwxyz" << endl;
-  debugstr << "1234567890 [({<()>})]" << endl;
-  debuglines->clear();
-  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
   
 	spectator.timestep(cur_time, deltatime);
 	graphics->viewbox->timestep(cur_time, deltatime);
 
-
+  double start = getTime();
 	graphics->swap();
+  double swap_time = getTime() - start;
 	// std::cout << getTime() - t1 << std::endl;
 
-	playing = !controls->key_pressed('Q');
-
-	
-	// cout << spectator.position << ' ' << spectator.angle.x << ',' << spectator.angle.y << endl;
+  debugstr << "Times: swap:" << swap_time << endl;
+  
+  debuglines->clear();
+  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
+  
+  playing = !controls->key_pressed('Q');
 }
 
 
@@ -306,8 +311,6 @@ void SingleGame::timestep() {
 
 
 const int loading_resolution = worldsize/2;
-
-EXPORT_PLUGIN(SingleTreeGame);
 
 
 SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize, -worldsize, -worldsize), worldsize*2) {

@@ -7,74 +7,68 @@
 #include "debug.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <cstring>
 
 EXPORT_PLUGIN(GLRenderBuf);
 
 GLFWwindow* static_window;
 
-void GLRenderBuf::set_buffers(GLuint verts, GLuint databuf, int start_size) {
+void GLRenderBuf::set_buffers(GLuint verts, GLuint databuf) {
   posbuffer = verts;
   databuffer = databuf;
-  allocated_space = start_size;
-  glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
-  glBufferData(GL_ARRAY_BUFFER, start_size*sizeof(RenderPosData), NULL, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, databuffer);
-  glBufferData(GL_ARRAY_BUFFER, start_size*sizeof(RenderFaceData), NULL, GL_DYNAMIC_DRAW);
+}
+
+void check_emptylist(vector<RenderPosData>& posdata, int empty) {
+  while (empty != -1) {
+    int last = empty;
+    empty = *((int*) &posdata[empty]);
+    ASSERT(empty >= -1 and empty < (int)posdata.size() and last != empty);
+  }
 }
 
 int GLRenderBuf::add(const RenderData& data) {
-	int pos;
-	{
-		std::lock_guard guard(lock);
-		if (empties.size() > 0) {
-			pos = empties.back();
-			empties.erase(empties.begin() + (empties.size()-1));
-		} else {
-			pos = num_points++;
-		}
+	std::lock_guard guard(lock);
+  int index;
+  if (first_empty != -1) {
+    index = first_empty;
+    first_empty = *((int*) &posdata[first_empty]);
+    posdata[index] = data.posdata;
+    facedata[index] = data.facedata;
+  } else {
+    index = posdata.size();
+    posdata.push_back(data.posdata);
+    facedata.push_back(data.facedata);
 	}
-	edit(pos, data);
-	return pos;
+  changed = true;
+  return index;
 }
 
 void GLRenderBuf::edit(int index, const RenderData& data) {
 	std::lock_guard guard(lock);
-	changes[index] = data;
+	posdata[index] = data.posdata;
+  facedata[index] = data.facedata;
+  changed = true;
 }
 
 void GLRenderBuf::del(int index) {
-	{
-		std::lock_guard guard(lock);
-		empties.push_back(index);
-	}
-	edit(index, RenderData());
+	std::lock_guard guard(lock);
+  RenderData nulldata;
+  posdata[index] = nulldata.posdata;
+  facedata[index] = nulldata.facedata;
+  *((int*) &posdata[index]) = first_empty;
+  first_empty = index;
+  changed = true;
 }
 
 void GLRenderBuf::sync() {
-	lock.lock();
-		
-	double t1 = getTime();
-
-	glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
-	GLfloat* renderptr = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, databuffer);
-	GLfloat* dataptr = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-	for (std::pair<int,RenderData> change : changes) {
-		memcpy(((char*)renderptr) + change.first*sizeof(RenderPosData), change.second.posarr, sizeof(RenderPosData));
-		memcpy(((char*)dataptr) + change.first*sizeof(RenderFaceData), change.second.facearr, sizeof(RenderFaceData));
-	}
-
-
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-
-	glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-
-	// std::cout << getTime() - t1 << std::endl;
-
-	changes.clear();
-	lock.unlock();
+  std::lock_guard guard(lock);
+  if (changed) {
+    glBindBuffer(GL_ARRAY_BUFFER, posbuffer);
+    glBufferData(GL_ARRAY_BUFFER, posdata.size()*sizeof(RenderPosData), &posdata[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, databuffer);
+    glBufferData(GL_ARRAY_BUFFER, facedata.size()*sizeof(RenderFaceData), &facedata[0], GL_STATIC_DRAW);
+    changed = false;
+  }
 }
 
 
@@ -152,7 +146,7 @@ void GLGraphics::init_graphics() {
 	ASSERT_RUN(glewInit() == GLEW_OK);
 	
 	glEnable(GL_DEBUG_OUTPUT);
-	// glDebugMessageCallback(errorCallback, 0);
+	glDebugMessageCallback(errorCallback, 0);
 	
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
@@ -196,7 +190,7 @@ void GLGraphics::init_graphics() {
 	posbuffer = blockbuffs[0];
 	databuffer = blockbuffs[1];
 	
-	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer, 10000000);
+	((GLRenderBuf*) blockbuf)->set_buffers(posbuffer, databuffer);
 	
 	glfwSwapInterval(1);
 }
@@ -277,7 +271,7 @@ void GLGraphics::block_draw_call() {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, block_textures);
 	glUniform1i(blockTexID, 0);
 	
-	glDrawArrays(GL_POINTS, 0, ((GLRenderBuf*)blockbuf)->num_points);
+	glDrawArrays(GL_POINTS, 0, ((GLRenderBuf*)blockbuf)->posdata.size());
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
@@ -294,14 +288,13 @@ void GLGraphics::swap() {
     screen_dims.y = new_height;
     glViewport(0, 0, screen_dims.x, screen_dims.y);
   }
+  // double start = getTime();
+	blockbuf->sync();
+  // cout << getTime() - start << " sync time " << endl;
   
 	block_draw_call();
 
   ((GLDebugLines*)debuglines)->draw_call();
-	
-	blockbuf->sync(); 
-	
-
 
 	glfwSwapBuffers(window);
 	// ((GLRenderBuf*) blockbuf)->lock.unlock();

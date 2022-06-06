@@ -9,7 +9,7 @@ LIBS := -lmingw32 -luser32 -lgdi32 -lshell32 -lglew32 -lglfw3 -lopengl32
 else
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-LIBS := -lGLEW -lGL -lglfw
+LIBS := -lGLEW -lGL -lglfw -pthread
 
 endif
 ifeq ($(UNAME_S),Darwin)

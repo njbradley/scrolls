@@ -3,10 +3,11 @@
 #include "debug.h"
 
 
-int main() {
-	pluginloader.load();
+int main(int numargs, char** args) {
+	pluginloader.load(numargs-1, args+1);
 	
-	Game* game = new SingleGame();
+	// Game* game = new SingleGame();
+	Game* game = Game::plugnew();
 	debuglines = DebugLines::plugnew();
 	
 	game->setup_gameloop();
@@ -15,7 +16,8 @@ int main() {
 	}
 	
 	plugdelete(debuglines);
-	delete game;
+	plugdelete(game);
+	// delete game;
 	
 	return 0;
 }
