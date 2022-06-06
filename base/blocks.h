@@ -66,11 +66,12 @@ struct Block {
 	uint8 blocklight = 0;
 	
 	enum : uint32 {
-		PROPOGATING_FLAGS = 0x0000ffff,
-		RENDER_FLAG = 0x00000001,
-		CHILDREN_FLAG = 0x00010000,
-		PARENT_FLAG = 0x00020000,
-		FREECONT_FLAG = 0x00040000
+		PROPOGATING_FLAGS = 0xffff0000,
+		STRUCTURE_FLAGS = 0x0000ffff,
+		RENDER_FLAG = 0x00010000,
+		CHILDREN_FLAG = 0x00000001,
+		PARENT_FLAG = 0x00000002,
+		FREENODE_FLAG = 0x00000004
 	};
 	
 	Block();
@@ -190,7 +191,7 @@ public:
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
 	// block class,
-	bool test_flag(uint32 flag) const;
+	uint32 test_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
 	
@@ -215,7 +216,7 @@ public:
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
-protected:
+// protected:
 	Node* node = nullptr;
 	
 	void copy_tree(Node* src, Node* dest);
@@ -393,7 +394,7 @@ inline constexpr int NodeIndex::z() const {
 
 
 inline FreeNode::FreeNode() {
-	flags = Block::FREECONT_FLAG;
+	flags = Block::FREENODE_FLAG;
 	freecontainer = this;
 }
 
@@ -410,55 +411,55 @@ inline bool NodePtr::isvalid() const {
 	return node != nullptr;
 }
 
-inline bool NodePtr::hasblock() const {
+inline bool NodePtr::hasblock() const { ASSERT(isvalid());
 	return !haschildren() and node->block != nullptr;
 }
 
-inline bool NodePtr::haschildren() const {
+inline bool NodePtr::haschildren() const { ASSERT(isvalid());
 	return node->flags & Block::CHILDREN_FLAG;
 }
 
-inline bool NodePtr::hasfreechild() const {
+inline bool NodePtr::hasfreechild() const { ASSERT(isvalid());
 	return node->freechild != nullptr;
 }
 
-inline bool NodePtr::hasparent() const {
+inline bool NodePtr::hasparent() const { ASSERT(isvalid());
 	return node->flags & Block::PARENT_FLAG;
 }
 
-inline bool NodePtr::hascontainer() const {
+inline bool NodePtr::hascontainer() const { ASSERT(isvalid());
 	return !hasparent() and !hasfreecontainer();
 }
 
-inline bool NodePtr::hasfreecontainer() const {
-	return node->flags & Block::FREECONT_FLAG;
+inline bool NodePtr::hasfreecontainer() const { ASSERT(isvalid());
+	return node->flags & Block::FREENODE_FLAG;
 }
 
-inline bool NodePtr::hasnextfree() const {
+inline bool NodePtr::hasnextfree() const { ASSERT(isvalid());
 	return hasfreecontainer() and node->freecontainer == node and node->freecontainer->next != nullptr;
 }
 
-inline bool NodePtr::test_flag(uint32 flag) const {
+inline uint32 NodePtr::test_flag(uint32 flag) const { ASSERT(isvalid());
 	return node->flags & flag;
 }
 
-inline NodeIndex NodePtr::parentindex() const {
+inline NodeIndex NodePtr::parentindex() const { ASSERT(isvalid());
 	return node - node->parent->children;
 }
 
-inline Block* NodePtr::block() {
+inline Block* NodePtr::block() { ASSERT(isvalid() and hasblock());
 	return node->block;
 }
 
-inline const Block* NodePtr::block() const {
+inline const Block* NodePtr::block() const { ASSERT(isvalid() and hasblock());
 	return node->block;
 }
 
-inline BlockContainer* NodePtr::container() {
+inline BlockContainer* NodePtr::container() { ASSERT(isvalid() and hascontainer());
 	return node->container;
 }
 
-inline const BlockContainer* NodePtr::container() const {
+inline const BlockContainer* NodePtr::container() const { ASSERT(isvalid() and hascontainer());
 	return node->container;
 }
 

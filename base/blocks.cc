@@ -150,8 +150,8 @@ void NodePtr::copy_tree(Node* src, Node* dest) {
 	if (src->flags & Block::CHILDREN_FLAG) {
 		dest->children = new Node[BDIMS3];
 		for (int i = 0; i < BDIMS3; i ++) {
-			dest->children[i].parent = dest;
 			copy_tree(&src->children[i], &dest->children[i]);
+			dest->children[i].parent = dest;
 		}
 	} else if (src->block != nullptr) {
 		dest->block = new Block(*node->block);
@@ -165,14 +165,14 @@ void NodePtr::copy_tree(NodePtr other) {
 }
 
 void NodePtr::swap_tree(NodePtr other) {
-	bool parent_flag = test_flag(Block::PARENT_FLAG);
-	bool other_parent_flag = test_flag(Block::PARENT_FLAG);
-	reset_flag(Block::PARENT_FLAG);
-	other.reset_flag(Block::PARENT_FLAG);
+	uint32 saved_flags = test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
+	uint32 other_saved_flags = test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
+	reset_flag(saved_flags);
+	other.reset_flag(other_saved_flags);
 	std::swap(*node, *other.node);
 	std::swap(node->parent, other.node->parent);
-	if (parent_flag) set_flag(Block::PARENT_FLAG);
-	if (other_parent_flag) other.set_flag(Block::PARENT_FLAG);
+	set_flag(saved_flags);
+	set_flag(other_saved_flags);
 	on_change();
 }
 
