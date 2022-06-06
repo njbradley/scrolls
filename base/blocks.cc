@@ -123,8 +123,8 @@ void NodePtr::copy_tree(Node* src, Node* dest) {
 	if (src->flags & Block::CHILDREN_FLAG) {
 		dest->children = new Node[BDIMS3];
 		for (int i = 0; i < BDIMS3; i ++) {
-			dest->children[i].parent = dest;
 			copy_tree(&src->children[i], &dest->children[i]);
+			dest->children[i].parent = dest;
 		}
 	} else if (src->block != nullptr) {
 		dest->block = new Block(*node->block);

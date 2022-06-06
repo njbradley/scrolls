@@ -25,16 +25,16 @@ DEFINE_PLUGIN(Game);
 
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 256;
+const int worldsize = 128;
 
-const int renderdistance = 256;  // FIX THIS VARIABLE NAME
-const int chunkloadingstart = 1;
+const int renderdistance = 128;  // FIX THIS VARIABLE NAME
+const int chunkloadingstart = 7;
 
 const int chunks = (2*chunkloadingstart + 1) * (2*chunkloadingstart + 1) *(2*chunkloadingstart + 1);
 
 const bool overwrite_saves = false;
 
-const bool multi_thread_loading_chunks = false;
+const bool multi_thread_loading_chunks = true;
 
 
 Pool jobPool(16);
@@ -150,6 +150,7 @@ vector<ivec3> chunksInRenderDistance(vec3 playerPos) {
 void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 		std::ostringstream oss;
 		oss << "./world/chunks/" << bc.position.x << "x" << bc.position.y << "y" << bc.position.z << "z" << worldsize << ".txt";
+
 		struct stat buf;
 		// If the file does not exist, create terrain.
 		// Otherwise, read from file.
@@ -213,30 +214,19 @@ void SingleGame::setup_gameloop() {
 }
 
 
-struct ivec3Cmp {
-	bool operator()(const glm::ivec3& a, const glm::ivec3& b)const {
-			return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
-		}
-};
-
 void SingleGame::threadRenderJob() {
-	std::set<glm::ivec3, ivec3Cmp> isChunkLoading;
 	while(true) {
 		vector<ivec3> chunksInRender;
 		{
-			if (multi_thread_loading_chunks) {
-				std::lock_guard lck(isChunkLoading_lock);
-			}
-
+			std::lock_guard lck(isChunkLoading_lock);
 			chunksInRender = chunksInRenderDistance(spectator.position);
 
 			// Loop for derendering.
-			// cout << generatedWorld.size() << endl;
+			cout << generatedWorld.size() << endl;
 			for (int i = generatedWorld.size() - 1; i >= 0; i--) {
 				bool continueRendering = false;
 				for (int j = chunksInRender.size() - 1; j >= 0; j--) {
-					if (chunksInRender[j] == generatedWorld[i].position || isChunkLoading.find(chunksInRender[j]) != isChunkLoading.end()) {
-						// cout << chunksInRender[j] << " " << generatedWorld[i].globalpos << endl;
+					if (chunksInRender[j] == generatedWorld[i].position) {
 						continueRendering = true;
 						chunksInRender.erase(chunksInRender.begin() + j);
 						break;
@@ -246,31 +236,24 @@ void SingleGame::threadRenderJob() {
 				if (!continueRendering) {
 					renderer->derender(generatedWorld[i].root(), graphics->blockbuf);
 					generatedWorld.erase(generatedWorld.begin() + i);
-					// cout << generatedWorld.size() << endl;
 				}
 			}
 
 			// Loop for rendering and generating new chunks.	
 			for (const ivec3& pos : chunksInRender) {
-
 				if (multi_thread_loading_chunks) {
-					if (isChunkLoading.find(pos) == isChunkLoading.end()) {
-						isChunkLoading.insert(pos);
-
-						jobPool.pushJob([&isChunkLoading, pos, this] { 
+						jobPool.pushJob([pos, this] { 
 							{
-								Chunk bc(this, pos, worldsize);
-								loadOrGenerateTerrain(bc);
+								if (SingleGame::chunkStillValid(pos)) {
+									Chunk bc(this, pos, worldsize);
+									loadOrGenerateTerrain(bc);
 
-								renderer->render(bc.root(), graphics->blockbuf);
-								
-								std::lock_guard lck(isChunkLoading_lock);
-								generatedWorld.push_back(std::move(bc));
-								isChunkLoading.erase(pos);
-								// cout << "choms " <<isChunkLoading.size() << " " << generatedWorld.size() << " " << pos << endl;
+									renderer->render(bc.root(), graphics->blockbuf);
+									std::lock_guard lck(isChunkLoading_lock);
+									generatedWorld.push_back(std::move(bc));
+								}
 							}
 						});
-					}
 				} else {
 					cout << pos << endl;
 					if (SingleGame::chunkStillValid(pos)) {
@@ -282,7 +265,7 @@ void SingleGame::threadRenderJob() {
 				}
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 		
 	}
