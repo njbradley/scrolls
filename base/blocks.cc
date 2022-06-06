@@ -10,9 +10,21 @@ bool NodePtr::step_down(NodeIndex pos) {
 	return false;
 }
 
+bool NodePtr::step_down_free() {
+	if (hasfreechild()) {
+		node = node->freechild;
+		return true;
+	}
+	return false;
+}
+
 bool NodePtr::step_up() {
 	if (hasparent()) {
 		node = node->parent;
+		return true;
+	}
+	if (hasfreecontainer()) {
+		node = node->freecontainer->highparent;
 		return true;
 	}
 	return false;
@@ -26,12 +38,20 @@ bool NodePtr::step_side(NodeIndex pos) {
 	return false;
 }
 
+bool NodePtr::step_side_free() {
+	if (hasnextfree()) {
+		node = node->freecontainer->next;
+		return true;
+	}
+	return false;
+}
+
 NodePtr NodePtr::child(NodeIndex index) const {
 	NodePtr result = *this;
 	if (result.step_down(index)) {
 		return result;
 	}
-	return NodeView();
+	return NodePtr();
 }
 
 NodePtr NodePtr::parent() const {
@@ -39,9 +59,16 @@ NodePtr NodePtr::parent() const {
 	if (result.step_up()) {
 		return result;
 	}
-	return NodeView();
+	return NodePtr();
 }
 
+NodePtr NodePtr::freechild() const {
+	NodePtr result = *this;
+	if (result.step_down_free()) {
+		return result;
+	}
+	return NodePtr();
+}
 
 void NodePtr::join() {
 	del_tree(node);
@@ -224,6 +251,14 @@ NodeView NodeView::child(NodeIndex index) const {
 NodeView NodeView::parent() const {
 	NodeView result = *this;
 	if (result.step_up()) {
+		return result;
+	}
+	return NodeView();
+}
+
+NodeView NodeView::freechild() const {
+	NodeView result = *this;
+	if (result.step_down_free()) {
 		return result;
 	}
 	return NodeView();

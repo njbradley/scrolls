@@ -26,6 +26,21 @@ struct IHitCube {
 };
 
 
+struct HitCube {
+	vec3 position;
+	float scale;
+	quat rotation;
+	
+	HitCube();
+	HitCube(vec3 pos, int nscale, quat rot);
+	
+	bool contains(vec3 point) const;
+	bool contains(const HitCube& other) const;
+	
+	bool collides(vec3 point) const;
+	bool collides(const HitCube& other) const;
+};
+
 
 
 
