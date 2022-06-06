@@ -13,6 +13,8 @@ struct IHitCube {
 	IHitCube();
 	IHitCube(ivec3 pos, int nscale);
 	
+	ivec3 midpoint() const;
+	
 	// A point is contained if it is inside the box or on the edge
 	bool contains(ivec3 point) const;
 	// a box is contained when no part of it extends outside the box
@@ -25,6 +27,21 @@ struct IHitCube {
 	bool collides(const IHitCube& other) const;
 };
 
+
+struct HitCube {
+	vec3 position;
+	float scale;
+	quat rotation;
+	
+	HitCube();
+	HitCube(vec3 pos, int nscale, quat rot);
+	
+	bool contains(vec3 point) const;
+	bool contains(const HitCube& other) const;
+	
+	bool collides(vec3 point) const;
+	bool collides(const HitCube& other) const;
+};
 
 
 
@@ -39,6 +56,10 @@ inline IHitCube::IHitCube() {
 
 inline IHitCube::IHitCube(ivec3 pos, int nscale): position(pos), scale(nscale) {
 	
+}
+
+inline ivec3 IHitCube::midpoint() const {
+	return position + scale/2;
 }
 
 inline bool IHitCube::contains(ivec3 point) const {

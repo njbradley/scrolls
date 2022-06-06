@@ -6,7 +6,7 @@
 int main() {
 	pluginloader.load();
 	
-	Game* game = Game::plugnew();
+	Game* game = new SingleGame();
 	debuglines = DebugLines::plugnew();
 	
 	game->setup_gameloop();
@@ -15,7 +15,7 @@ int main() {
 	}
 	
 	plugdelete(debuglines);
-	plugdelete(game);
+	delete game;
 	
 	return 0;
 }

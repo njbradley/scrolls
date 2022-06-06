@@ -66,10 +66,12 @@ struct Block {
 	uint8 blocklight = 0;
 	
 	enum : uint32 {
-		PROPOGATING_FLAGS = 0x0000ffff,
-		RENDER_FLAG = 0x00000001,
-		CHILDREN_FLAG = 0x00010000,
-		PARENT_FLAG = 0x00020000
+		PROPOGATING_FLAGS = 0xffff0000,
+		STRUCTURE_FLAGS = 0x0000ffff,
+		RENDER_FLAG = 0x00010000,
+		CHILDREN_FLAG = 0x00000001,
+		PARENT_FLAG = 0x00000002,
+		FREENODE_FLAG = 0x00000004
 	};
 	
 	Block();
@@ -86,15 +88,18 @@ struct Node {
 		Node* children = nullptr;
 		Block* block;
 	};
-	FreeNode* freenode = nullptr;
+	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
 	int lastval = 1;
 };
 
 struct FreeNode : Node {
+	Node* highparent = nullptr;
 	FreeNode* next = nullptr;
 	quat rotation;
 	vec3 offset;
+	
+	FreeNode();
 };
 	
 	
@@ -138,6 +143,10 @@ public:
 	// whether the node has children (accesed by child())
 	bool haschildren() const;
 	bool hasparent() const;
+	bool hascontainer() const;
+	bool hasfreecontainer() const;
+	bool hasfreechild() const;
+	bool hasnextfree() const;
 	
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
@@ -151,7 +160,8 @@ public:
 	const Block* block() const;
 	
 	BlockContainer* container();
-	FreeNode* freecontainer();
+	const BlockContainer* container() const;
+	NodePtr freecontainer() const;
 	
 	// turns the current view into an invaid instance
 	// basically the same as node = NodeView()
@@ -160,13 +170,16 @@ public:
 	// moves the view down, up, or sideways on the tree.
 	// returns true if the movement was successful.
 	bool step_down(NodeIndex pos);
+	bool step_down_free();
 	bool step_up();
 	bool step_side(NodeIndex pos);
+	bool step_side_free();
 	
 	// returns a new view to the parent node
 	NodePtr parent() const;
 	// returns a new view to the child at the given index.
 	NodePtr child(NodeIndex index) const;
+	NodePtr freechild() const;
 	
 	// turns a leaf node into an inner node, and
 	// creates 8 child nodes
@@ -178,7 +191,7 @@ public:
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
 	// block class,
-	bool test_flag(uint32 flag) const;
+	uint32 test_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
 	
@@ -203,7 +216,7 @@ public:
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
-protected:
+// protected:
 	Node* node = nullptr;
 	
 	void copy_tree(Node* src, Node* dest);
@@ -243,6 +256,8 @@ public:
 	// if the position is inside the root node but there isnt
 	// a node with the given scale, the smallest node will be returned
 	// this means passing 1 as scale guarantees you will recieve a leaf node
+	NodeView freechild() const;
+	
 	NodeView get_global(ivec3 pos, int scale);
 	// behaves similar to get_global, this method will try to move
 	// the current view to the given position
@@ -251,13 +266,15 @@ public:
 	bool moveto(ivec3 pos, int scale);
 };
 
-
+// class FreeNodeView : public NodePtr, public HitCube {
 class FreeNodeView : public NodeView {
 	FreeNode* freecontainer = nullptr;
+	vec3 freecont_position;
+public:
 	
 	FreeNodeView();
 	FreeNodeView(const NodeView& node, FreeNode* freecont);
-	explicit FreeNodeView(const NodeView& node);
+	// explicit FreeNodeView(const NodeView& node);
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -377,6 +394,11 @@ inline constexpr int NodeIndex::z() const {
 }
 
 
+inline FreeNode::FreeNode() {
+	flags = Block::FREENODE_FLAG;
+	freecontainer = this;
+}
+
 
 inline NodePtr::NodePtr(): node(nullptr) {
 	
@@ -390,40 +412,56 @@ inline bool NodePtr::isvalid() const {
 	return node != nullptr;
 }
 
-inline bool NodePtr::hasblock() const {
+inline bool NodePtr::hasblock() const { ASSERT(isvalid());
 	return !haschildren() and node->block != nullptr;
 }
 
-inline bool NodePtr::haschildren() const {
+inline bool NodePtr::haschildren() const { ASSERT(isvalid());
 	return node->flags & Block::CHILDREN_FLAG;
 }
 
-inline bool NodePtr::hasparent() const {
+inline bool NodePtr::hasfreechild() const { ASSERT(isvalid());
+	return node->freechild != nullptr;
+}
+
+inline bool NodePtr::hasparent() const { ASSERT(isvalid());
 	return node->flags & Block::PARENT_FLAG;
 }
 
-inline bool NodePtr::test_flag(uint32 flag) const {
+inline bool NodePtr::hascontainer() const { ASSERT(isvalid());
+	return !hasparent() and !hasfreecontainer();
+}
+
+inline bool NodePtr::hasfreecontainer() const { ASSERT(isvalid());
+	return node->flags & Block::FREENODE_FLAG;
+}
+
+inline bool NodePtr::hasnextfree() const { ASSERT(isvalid());
+	return hasfreecontainer() and node->freecontainer == node and node->freecontainer->next != nullptr;
+}
+
+inline uint32 NodePtr::test_flag(uint32 flag) const { ASSERT(isvalid());
 	return node->flags & flag;
 }
 
-inline NodeIndex NodePtr::parentindex() const {
+inline NodeIndex NodePtr::parentindex() const { ASSERT(isvalid());
 	return node - node->parent->children;
 }
 
-inline Block* NodePtr::block() {
+inline Block* NodePtr::block() { ASSERT(isvalid() and hasblock());
 	return node->block;
 }
 
-inline const Block* NodePtr::block() const {
+inline const Block* NodePtr::block() const { ASSERT(isvalid() and hasblock());
 	return node->block;
 }
 
-inline BlockContainer* NodePtr::container() {
+inline BlockContainer* NodePtr::container() { ASSERT(isvalid() and hascontainer());
 	return node->container;
 }
 
-inline FreeNode* NodePtr::freecontainer() {
-	return node->freecontainer;
+inline const BlockContainer* NodePtr::container() const { ASSERT(isvalid() and hascontainer());
+	return node->container;
 }
 
 inline void NodePtr::invalidate() {
