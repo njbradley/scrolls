@@ -58,7 +58,7 @@ inline IHitCube::IHitCube(ivec3 pos, int nscale): position(pos), scale(nscale) {
 	
 }
 
-inline ivec3 midpoint() const {
+inline ivec3 IHitCube::midpoint() const {
 	return position + scale/2;
 }
 
