@@ -88,6 +88,35 @@ void NodePtr::split() {
 	on_change();
 }
 
+void NodePtr::subdivide() {
+	Block* oldblock = node->block;
+	node->block = nullptr;
+	split();
+	if (oldblock != nullptr) {
+		for (int i = 0; i < BDIMS3; i ++) {
+			node->children[i].block = new Block(*oldblock);
+		}
+	}
+	delete oldblock;
+}
+
+void NodePtr::set_child(NodeIndex index, NodePtr newchild) {
+	ASSERT(haschildren());
+	newchild.node->parent = node;
+	newchild.set_flag(Block::PARENT_FLAG);
+	del_tree(&node->children[index]);
+	node->children[index] = *newchild.node;
+}
+
+NodePtr NodePtr::swap_child(NodeIndex index, NodePtr newchild) {
+	ASSERT(haschildren());
+	newchild.node->parent = node;
+	newchild.set_flag(Block::PARENT_FLAG);
+	NodePtr old = child(index);
+	node->children[index] = *newchild.node;
+	return old;
+}
+
 void NodePtr::set_flag(uint32 flag) {
 	node->flags |= flag;
 	flag &= Block::PROPOGATING_FLAGS;
@@ -156,24 +185,42 @@ void NodePtr::copy_tree(Node* src, Node* dest) {
 	} else if (src->block != nullptr) {
 		dest->block = new Block(*src->block);
 	}
+	dest->flags |= Block::RENDER_FLAG;
 }
 
 void NodePtr::copy_tree(NodePtr other) {
+	uint32 saved_flags = test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
+	Node* oldparent = node->parent;
 	del_tree(node);
 	copy_tree(other.node, node);
+	node->parent = oldparent;
+	set_flag(saved_flags);
 	on_change();
 }
 
 void NodePtr::swap_tree(NodePtr other) {
 	uint32 saved_flags = test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
-	uint32 other_saved_flags = test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
+	uint32 other_saved_flags = other.test_flag(Block::PARENT_FLAG | Block::FREENODE_FLAG);
 	reset_flag(saved_flags);
 	other.reset_flag(other_saved_flags);
 	std::swap(*node, *other.node);
 	std::swap(node->parent, other.node->parent);
+	if (haschildren()) {
+		for (int i = 0; i < BDIMS3; i ++) {
+			node->children[i].parent = node;
+		}
+	}
+	if (other.haschildren()) {
+		for (int i = 0; i < BDIMS3; i ++) {
+			other.node->children[i].parent = other.node;
+		}
+	}
 	set_flag(saved_flags);
-	set_flag(other_saved_flags);
-	on_change();
+	other.set_flag(other_saved_flags);
+	parentindex();
+	other.parentindex();
+	set_flag(node->flags);
+	other.set_flag(other.node->flags);
 }
 
 void NodePtr::on_change() {
@@ -391,3 +438,41 @@ NodeView BlockContainer::get_global(ivec3 pos, int goal_scale) {
 NodeView BlockContainer::root() const {
 	return NodeView(*this);
 }
+
+void relocate_recursive(NodeView src, NodeView dest, int depth) {
+	if (depth > 0) {
+		if (!dest.haschildren()) {
+			dest.split();
+		}
+		for (int i = 0; i < BDIMS3; i ++) {
+			relocate_recursive(src, dest.child(i), depth-1);
+		}
+	} else {
+		NodeView newdest = src.get_global(dest.position, dest.scale);
+		if (newdest.isvalid()) {
+			while (newdest.scale > dest.scale) {
+				newdest.subdivide();
+				newdest = newdest.get_global(dest.position, dest.scale);
+			}
+			dest.swap_tree(newdest);
+		}
+	}
+}
+			
+
+BlockContainer BlockContainer::relocate(ivec3 newpos) {
+	ivec3 diff = newpos - position;
+	int resolution = scale;
+	int depth = 0;
+	while (diff.x / resolution == 0 and diff.y / resolution == 0 and diff.z / resolution) {
+		resolution /= BDIMS;
+		depth ++;
+	}
+	cout << "Moving with resolution " << resolution << ' ' << depth << endl;
+	
+	BlockContainer newroot (newpos, scale);
+	relocate_recursive(root(), newroot.root(), depth);
+	return newroot;
+}
+	
+	

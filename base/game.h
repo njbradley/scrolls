@@ -74,13 +74,19 @@ public:
 	SingleTreeGame();
 	virtual ~SingleTreeGame();
 	
+	void generate_new_world(NodeView newnode, NodeView oldroot, bool generate, bool copy);
+	void check_loading();
+	void relocate_world(ivec3 newpos);
 	virtual void setup_gameloop();
 	virtual void timestep();
 protected:
 	GraphicsContext* graphics;
 	Renderer* renderer;
 	TerrainGenerator* generator;
+	Pool* threadpool;
 	
+	std::mutex generation_lock;
+	std::mutex world_lock;
 	BlockContainer world;
 	
 	Spectator spectator;

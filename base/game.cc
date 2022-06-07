@@ -26,7 +26,7 @@ DEFINE_PLUGIN(Game);
 EXPORT_PLUGIN(SingleTreeGame);
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 64;
+const int worldsize = 512;
 
 const int renderdistance = worldsize;  // FIX THIS VARIABLE NAME
 const int chunkloadingstart = 3;
@@ -309,18 +309,19 @@ void SingleGame::timestep() {
 
 
 
+const int loading_resolution = 64;
 
-const int loading_resolution = worldsize/2;
 
-
-SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize, -worldsize, -worldsize), worldsize*2) {
+SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize/2, -worldsize/2, -worldsize/2), worldsize) {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
   generator = TerrainGenerator::plugnew(12345);
+  threadpool = new Pool(4);
 }
 
 SingleTreeGame::~SingleTreeGame() {
+  delete threadpool;
   plugdelete(generator);
   plugdelete(controls);
   plugdelete(renderer);
@@ -364,22 +365,95 @@ void SingleTreeGame::setup_gameloop() {
 	graphics->set_camera(&spectator.position, &spectator.angle);
 }
 
-// void check_loading() {
-//   IHitCube goalbox (world.root().midpoint() - loading_resolution/2, loading_resolution/2)
-//   if (!goalbox.contains(spectator.position)) {
-//     ivec3 rolldir = glm::sign(
+void SingleTreeGame::generate_new_world(NodeView newnode, NodeView oldroot, bool generate, bool copy) {
+  // cout << newnode.position << ' ' << oldroot.position << ' ' <<(newnode.position - oldroot.position) % newnode.scale  << endl;
+  if ((newnode.position - oldroot.position) % newnode.scale != ivec3(0,0,0)) {
+    if (!newnode.haschildren()) {
+      newnode.split();
+    }
+    for (int i = 0; i < BDIMS3; i ++) {
+      generate_new_world(newnode.child(i), oldroot, generate, copy);
+    }
+  } else if (oldroot.contains(newnode)) {
+    if (copy) {
+      NodeView src = oldroot.get_global(newnode.position, newnode.scale);
+      if (src.scale > newnode.scale) {
+        // cout << "copying " << newnode.position << ' ' << newnode.scale << " from " << src.position << ' ' << src.scale << endl;
+        newnode.copy_tree(src);
+      } else {
+        // cout << "swapping " << newnode.position << ' ' << newnode.scale << endl;
+        newnode.swap_tree(src);
+      }
+      for (Direction dir : Direction::all) {
+        IHitCube sidebox = IHitCube(newnode) + ivec3(dir);
+        if (!sidebox.collides(oldroot)) {
+          NodeView sidenode = newnode.get_global(sidebox.position, sidebox.scale);
+          if (sidenode.isvalid()) {
+            for (NodePtr node : NodePtr(sidenode).iter<DirBlockIter>(-dir)) {
+              node.on_change();
+            }
+            for (NodePtr node : NodePtr(newnode).iter<DirBlockIter>(dir)) {
+              node.on_change();
+            }
+          }
+        }
+      }
+    }
+  } else {
+    if (generate) {
+      // cout << "generating " << newnode.position << ' ' << newnode.scale << endl;
+      generator->generate_chunk(newnode);
+    }
+  }
+}
+
+void SingleTreeGame::check_loading() {
+  if (generation_lock.try_lock()) {
+    std::unique_lock guard(generation_lock, std::adopt_lock);
+    IHitCube goalbox (world.root().midpoint() - loading_resolution*3/4, loading_resolution*3/2);
+    if (!goalbox.contains(ivec3(spectator.position))) {
+      ivec3 localpos = ivec3(spectator.position) - goalbox.midpoint();
+      ivec3 rolldir = glm::sign(localpos * 2 / loading_resolution);
+      ivec3 newpos = world.position + rolldir * loading_resolution;
+      // relocate_world(newpos);
+      threadpool->pushJob([this, newpos] () {
+        relocate_world(newpos);
+      });
+    }
+  }
+}
+
+void SingleTreeGame::relocate_world(ivec3 newpos) {
+  std::lock_guard guard(generation_lock);
+  
+  cout << "Changing from " << world.position << " to " << newpos << endl;
+  BlockContainer newworld (newpos, world.scale);
+  
+  cout << "generating new world" << endl;
+  generate_new_world(newworld.root(), world.root(), true, false);
+  renderer->render(newworld.root(), graphics->blockbuf);
+  
+  {
+    std::lock_guard guard(world_lock);
+    cout << "copying old world over" << endl;
+    generate_new_world(newworld.root(), world.root(), false, true);
+    newworld.swap(world);
+  }
+  renderer->render(world.root(), graphics->blockbuf);
+  
+  cout << "derendering " << endl;
+  renderer->derender(newworld.root(), graphics->blockbuf);
+}
 
 void SingleTreeGame::timestep() {
 	static double last_time = getTime();
 	double cur_time = getTime();
 	double deltatime = cur_time - last_time;
 	last_time = cur_time;
-	
+	check_loading();
   std::stringstream debugstr;
   debugstr << "FPS: " << 1 / deltatime << endl;
   debugstr << "spectatorpos: " << spectator.position << endl;
-  debugstr << "abcdefghijklmnopqrstuvwxyz" << endl;
-  debugstr << "1234567890 [({<()>})]" << endl;
   debuglines->clear();
   debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
   

@@ -63,7 +63,7 @@ public:
 	using NodeIter<NodePtrT>::NodeIter;
 protected:
 	using NodeIter<NodePtrT>::node;
-	virtual bool valid_node() const { return !node.haschildren(); }
+	virtual bool valid_node() const { return node.hasblock(); }
 };
 
 template <typename NodePtrT>
@@ -83,7 +83,7 @@ public:
 	using DirNodeIter<NodePtrT>::DirNodeIter;
 protected:
 	using NodeIter<NodePtrT>::node;
-	virtual bool valid_node() const { return !node.haschildren(); }
+	virtual bool valid_node() const { return node.hasblock(); }
 };
 
 template <typename NodePtrT>
@@ -102,7 +102,7 @@ public:
 	using FlagNodeIter<NodePtrT>::FlagNodeIter;
 protected:
 	using NodeIter<NodePtrT>::node;
-	virtual bool valid_node() const { return !node.haschildren(); }
+	virtual bool valid_node() const { return node.hasblock(); }
 };
 
 

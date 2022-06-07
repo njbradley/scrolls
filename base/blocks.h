@@ -76,6 +76,7 @@ struct Block {
 	
 	Block();
 	Block(int value);
+	Block(const Block& other);
 };
 
 struct Node {
@@ -183,10 +184,15 @@ public:
 	
 	// turns a leaf node into an inner node, and
 	// creates 8 child nodes
-	void join();
+	void split();
 	// turns an inner node into a leaf node, deleting
 	// all children previously on the node
-	void split();
+	void join();
+	
+	void subdivide();
+	
+	void set_child(NodeIndex index, NodePtr newchild);
+	NodePtr swap_child(NodeIndex index, NodePtr newchild);
 	
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
@@ -213,6 +219,9 @@ public:
 	// deletes the current tree and copies the tree pointed to
 	// by other onto this node
 	void copy_tree(NodePtr other);
+	
+	template <template <typename> typename NodeIterT, typename ... Args>
+	BlockIterable<NodeIterT<NodePtr>> iter(Args ... args);
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
@@ -264,6 +273,9 @@ public:
 	// if the position is outside the root node, false is returned.
 	// the view will be left pointing at the root node
 	bool moveto(ivec3 pos, int scale);
+	
+	template <template <typename> typename NodeIterT, typename ... Args>
+	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
 };
 
 // class FreeNodeView : public NodePtr, public HitCube {
@@ -327,11 +339,14 @@ public:
 	using NodeView::swap_block;
 	using NodeView::from_file;
 	using NodeView::to_file;
+	using NodeView::iter;
 	
 	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);
 	NodeView get_global(ivec3 pos, int goal_scale);
 	
 	NodeView root() const;
+	
+	BlockContainer relocate(ivec3 newpos);
 };
 
 
@@ -359,6 +374,10 @@ inline Block::Block() {
 }
 
 inline Block::Block(int nvalue): value(nvalue) {
+	
+}
+
+inline Block::Block(const Block& other): value(other.value) {
 	
 }
 
@@ -476,6 +495,10 @@ inline bool NodePtr::operator!=(const NodePtr& other) const {
 	return !(*this == other);
 }
 
+template <template <typename> typename NodeIterT, typename ... Args>
+BlockIterable<NodeIterT<NodePtr>> NodePtr::iter(Args ... args) {
+	return {*this, args...};
+}
 
 
 inline NodeView::NodeView() {
@@ -490,7 +513,10 @@ inline NodeView::NodeView(NodePtr node, ivec3 position, int scale): NodePtr(node
 	
 }
 
-
+template <template <typename> typename NodeIterT, typename ... Args>
+BlockIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
+	return {*this, args...};
+}
 
 
 inline Block* BlockView::operator->() {

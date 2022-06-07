@@ -53,7 +53,7 @@ class IHitCube;
 class Game;
 class Chunk;
 class SingleGame;
-
+class Pool;
 
 
 #define ERR(MSG) std::cerr << "ERR: '" << MSG << "'" << endl \
@@ -83,8 +83,9 @@ struct Direction {
 		}
 	}
 	
-	constexpr operator ivec3() { return dir_array[index]; }
-	constexpr operator int() { return index; }
+	constexpr operator ivec3() const { return dir_array[index]; }
+	constexpr operator int() const { return index; }
+	constexpr Direction operator-() const { return Direction((index+3)%6); }
 };
 
 bool getKey(char let);
