@@ -49,6 +49,7 @@ public:
 protected:
 	GraphicsContext* graphics;
 	Renderer* renderer;
+	BlockFileSystem* filesystem;
 	
 	TerrainGenerator* generator;
 

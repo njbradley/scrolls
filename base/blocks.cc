@@ -148,31 +148,57 @@ Block* NodePtr::swap_block(Block* block) {
 	on_change();
 }
 
-void NodePtr::from_file(istream& ifile) {
-	for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
-		if (ifile.peek() == '{') {
-			ifile.get();
-			curnode.split();
-		} else if (ifile.peek() == '~') {
-			ifile.get();
-			curnode.set_block(nullptr);
-		} else {
-			curnode.set_block(new Block(ifile.get()));
-		}
-	}
-}
-
-void NodePtr::to_file(ostream& ofile) {
-	for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
-		if (curnode.haschildren()) {
-			ofile.put('{');
-		} else if (curnode.hasblock()) {
-			ofile.put(curnode.block()->value);
-		} else {
-			ofile.put('~');
-		}
-	}
-}
+// void NodePtr::from_file(istream& ifile) {
+// 	// for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
+// 	// 	if (ifile.peek() == '{') {
+// 	// 		ifile.get();
+// 	// 		curnode.split();
+// 	// 	} else if (ifile.peek() == '~') {
+// 	// 		ifile.get();
+// 	// 		curnode.set_block(nullptr);
+// 	// 	} else {
+// 	// 		curnode.set_block(new Block(ifile.get()));
+// 	// 	}
+// 	// }
+// }
+//
+// void to_file_recursive(NodePtr node, vector<std::stringstream>& level_buffers, int depth) {
+// 	if (level_buffers.size() >= depth) {
+// 		level_buffers.emplace_back();
+// 	}
+// 	if (node.haschildren() {
+// 		level_buffers[depth].put('{');
+// 		for (int i = 0; i < BDIMS3; i ++) {
+// 			to_file_recursive(node.child(i), level_buffers, depth + 1);
+// 		}
+// 	} else if (node.hasblock()) {
+// 		level_buffers[depth].put(node.block()->value);
+// 	} else {
+// 		level_buffers[depth].put('~');
+// 	}
+// }
+//
+//
+// void NodePtr::to_file(ostream& ofile) {
+// 	vector<std::stringstream> level_buffers;
+// 	to_file_recursive(node, level_buffers, 0);
+// 	for (std::strinstream& buffer : level_buffers) {
+// 		buffer.seekg(0, std::ios::end);
+// 		uint32 len = htonl(buffer.tellg());
+// 		buffer.seekg(0, std::ios::beg);
+// 		ofile.write(&len, sizeof(len));
+// 		ofile << buffer.rdbuf();
+// 	}
+// 	// for (NodePtr curnode : BlockIterable<NodeIter<NodePtr>>(*this)) {
+// 	// 	if (curnode.haschildren()) {
+// 	// 		ofile.put('{');
+// 	// 	} else if (curnode.hasblock()) {
+// 	// 		ofile.put(curnode.block()->value);
+// 	// 	} else {
+// 	// 		ofile.put('~');
+// 	// 	}
+// 	// }
+// }
 
 void NodePtr::copy_tree(Node* src, Node* dest) {
 	*dest = *src;
@@ -343,9 +369,6 @@ bool NodeView::moveto(ivec3 pos, int goalscale) {
   }
 	return true;
 }
-
-
-
 
 
 

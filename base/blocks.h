@@ -209,10 +209,6 @@ public:
 	void set_block(Block* block);
 	Block* swap_block(Block* block);
 	
-	// read/write the current nodes tree to/from a file.
-	void from_file(istream& ifile);
-	void to_file(ostream& ofile);
-	
 	// swaps the tree at the current node with the tree pointed to
 	// by other
 	void swap_tree(NodePtr other);
@@ -337,8 +333,6 @@ public:
 	using NodeView::reset_flag;
 	using NodeView::set_block;
 	using NodeView::swap_block;
-	using NodeView::from_file;
-	using NodeView::to_file;
 	using NodeView::iter;
 	
 	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);

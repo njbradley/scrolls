@@ -54,6 +54,8 @@ class Game;
 class Chunk;
 class SingleGame;
 class Pool;
+class BlockFileSystem;
+class BlockFileFormat;
 
 
 #define ERR(MSG) std::cerr << "ERR: '" << MSG << "'" << endl \

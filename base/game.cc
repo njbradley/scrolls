@@ -7,6 +7,7 @@
 #include "threadpool/pool.h"
 #include "debug.h"
 #include "entity.h"
+#include "fileformat.h"
 
 #include <set>
 #include <sstream>
@@ -26,7 +27,7 @@ DEFINE_PLUGIN(Game);
 EXPORT_PLUGIN(SingleTreeGame);
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 512;
+const int worldsize = 64;
 
 const int renderdistance = worldsize;  // FIX THIS VARIABLE NAME
 const int chunkloadingstart = 3;
@@ -63,6 +64,7 @@ SingleGame::SingleGame() {
 	graphics = GraphicsContext::plugnew();
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
+  filesystem = BlockFileSystem::plugnew("world/chunks/");
   jobPool = new Pool(4);
 
 	generatedWorld.reserve(chunks);
@@ -75,7 +77,7 @@ SingleGame::~SingleGame() {
   run_thread = false;
   nick.join();
   delete jobPool;
-  
+  plugdelete(filesystem);
 	plugdelete(graphics);
 	plugdelete(renderer);
 	plugdelete(controls);
@@ -154,22 +156,9 @@ vector<ivec3> chunksInRenderDistance(vec3 playerPos) {
 }
 
 void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
-		std::ostringstream oss;
-		oss << "./world/chunks/" << bc.position.x << "x" << bc.position.y << "y" << bc.position.z << "z" << worldsize << ".txt";
-
-		struct stat buf;
-		// If the file does not exist, create terrain.
-		// Otherwise, read from file.
-		if (stat(oss.str().c_str(), &buf) != 0) {
+		if (!filesystem->from_file(bc.root())) {
 			generator->generate_chunk(bc.root());
-			std::ofstream outfile(oss.str(), std::ios::binary);
-			bc.root().to_file(outfile);
-			outfile.close();
-		} else {
-			std::ifstream t(oss.str().c_str(), std::ios::binary);
-			bc.root().from_file(t);
-			// cout << "LOAD " << oss.str().c_str() << endl;
-			
+      filesystem->to_file(bc.root());
 		}
 }
 
