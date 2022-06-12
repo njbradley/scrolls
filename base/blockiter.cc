@@ -10,7 +10,8 @@ template <typename NodePtrT>
 void NodeIter<NodePtrT>::step_down() {
 	// cout << "step down " << position << ' ' << scale << endl;
 	if (node.haschildren()) {
-		node.step_down(startpos());
+		node = node.child(startpos());
+		// node.step_down(startpos());
 		get_safe();
 	} else {
 		step_side();
@@ -23,10 +24,12 @@ void NodeIter<NodePtrT>::step_side() {
 	if (!node.hasparent() or node == highest_node) {
 		finish();
 	} else if (node.parentindex() == endpos()) {
-		node.step_up();
+		// node.step_up();
+		node = node.parent();
 		step_side();
 	} else {
-		node.step_side(increment_func(node.parentindex()));
+		// node.step_side(increment_func(node.parentindex()));
+		node = node.sibling(increment_func(node.parentindex()));
 		get_safe();
 	}
 }

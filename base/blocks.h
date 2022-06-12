@@ -67,7 +67,7 @@ struct Block {
 	
 	enum : uint32 {
 		PROPOGATING_FLAGS = 0xffff0000,
-		STRUCTURE_FLAGS = 0x0000ffff,
+		STRUCTURE_FLAGS = 0x000000ff,
 		RENDER_FLAG = 0x00010000,
 		CHILDREN_FLAG = 0x00000001,
 		PARENT_FLAG = 0x00000002,
@@ -91,7 +91,7 @@ struct Node {
 	};
 	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
-	int lastval = 1;
+	uint8 lastval = -1;
 };
 
 struct FreeNode : Node {
@@ -125,6 +125,9 @@ struct NodeIndex {
 	constexpr int z() const;
 };
 	
+
+// Class that represents a pointer to a Node in an octree.
+//
 
 class NodePtr {
 public:
@@ -168,16 +171,9 @@ public:
 	// basically the same as node = NodeView()
 	void invalidate();
 	
-	// moves the view down, up, or sideways on the tree.
-	// returns true if the movement was successful.
-	bool step_down(NodeIndex pos);
-	bool step_down_free();
-	bool step_up();
-	bool step_side(NodeIndex pos);
-	bool step_side_free();
-	
 	// returns a new view to the parent node
 	NodePtr parent() const;
+	NodePtr sibling(NodeIndex index) const;
 	// returns a new view to the child at the given index.
 	NodePtr child(NodeIndex index) const;
 	NodePtr freechild() const;
@@ -190,9 +186,6 @@ public:
 	void join();
 	
 	void subdivide();
-	
-	void set_child(NodeIndex index, NodePtr newchild);
-	NodePtr swap_child(NodeIndex index, NodePtr newchild);
 	
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
@@ -221,7 +214,7 @@ public:
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
-// protected:
+protected:
 	Node* node = nullptr;
 	
 	void copy_tree(Node* src, Node* dest);
@@ -234,41 +227,30 @@ public:
 // of the octree
 // A nodeview points to a position on the block tree, while
 // also keeping track of the current position and size of the
-// node pointed to. the view can be moved around by methods
-// like step_up/down/side or moveto
-// The node can also be modified using split/join and set methods
+// node pointed to.
+// The node can be modified using split/join and set methods
 class NodeView : public NodePtr, public IHitCube {
 public:
 	
 	NodeView();
 	NodeView(NodePtr node, IHitCube cube);
 	NodeView(NodePtr node, ivec3 gpos, int nscale);
-	// explicit NodeView(NodePtr node);
-	
-	// moves the view down, up, or sideways on the tree.
-	// returns true if the movement was successful.
-	bool step_down(NodeIndex pos);
-	bool step_up();
-	bool step_side(NodeIndex pos);
+	// explicit NodeView(NodePtr node)
 	
 	// returns a new view to the parent node
 	NodeView parent() const;
+	NodeView sibling(NodeIndex index) const;
 	// returns a new view to the child at the given index.
 	NodeView child(NodeIndex index) const;
+	NodeView freechild() const;
 	// returns a view of the block at the given position
 	// if the position is outside of the root node of the tree,
 	// an invalid view is returned.
 	// if the position is inside the root node but there isnt
 	// a node with the given scale, the smallest node will be returned
 	// this means passing 1 as scale guarantees you will recieve a leaf node
-	NodeView freechild() const;
-	
 	NodeView get_global(ivec3 pos, int scale);
-	// behaves similar to get_global, this method will try to move
-	// the current view to the given position
-	// if the position is outside the root node, false is returned.
-	// the view will be left pointing at the root node
-	bool moveto(ivec3 pos, int scale);
+	
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
 	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
@@ -296,10 +278,10 @@ public:
 	Block* operator->();
 	NodeView nodeview() const;
 protected:
-	using NodeView::step_down;
-	using NodeView::step_up;
-	using NodeView::step_side;
-	using NodeView::moveto;
+	// using NodeView::step_down;
+	// using NodeView::step_up;
+	// using NodeView::step_side;
+	// using NodeView::moveto;
 	
 	using NodeView::join;
 	using NodeView::split;
@@ -308,7 +290,7 @@ protected:
 
 // this is the class that allocates and owns an octree
 // and all nodes
-class BlockContainer : protected NodeView {
+class BlockContainer : public NodeView {
 public:
 	BlockContainer(ivec3 pos, int scale);
 	BlockContainer(const BlockContainer& other);
@@ -319,28 +301,8 @@ public:
 	
 	void swap(BlockContainer& other);
 	
-	using NodeView::position;
-	using NodeView::scale;
-	
-	using NodeView::hasblock;
-	using NodeView::haschildren;
-	using NodeView::block;
-	using NodeView::child;
-	using NodeView::split;
-	using NodeView::join;
-	using NodeView::test_flag;
-	using NodeView::set_flag;
-	using NodeView::reset_flag;
-	using NodeView::set_block;
-	using NodeView::swap_block;
-	using NodeView::iter;
-	
 	virtual BlockContainer* find_neighbor(ivec3 pos, int goalscale);
 	NodeView get_global(ivec3 pos, int goal_scale);
-	
-	NodeView root() const;
-	
-	BlockContainer relocate(ivec3 newpos);
 };
 
 
