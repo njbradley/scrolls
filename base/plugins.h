@@ -34,14 +34,44 @@ plugdelete(...)
 
 
 using PluginId = string;
+template <typename BaseType> struct PluginDef;
 
-vector<void(*)()>* plugin_choosers();
+
+
+
+struct PluginReq {
+	PluginId baseplugin;
+	PluginId reqplugin;
+};
+
+struct ParamParser {
+	string name;
+	void (*parser_func)(istream& inp);
+};
+
+class PluginLoader {
+public:
+	vector<PluginReq> requirements;
+	vector<void(*)()> plugin_choosers;
+	vector<ParamParser> params;
+	PluginLoader();
+	void load(int numargs, char** args);
+	void choose_plugins();
+	void parse_request(string request);
+	
+	template <typename BaseType>
+	void add_plugin();
+	template <typename VarType, VarType* pointer>
+	void add_param(string name);
+	
+	string find_path(string search_path);
+};
+
+PluginLoader* pluginloader();
 
 void no_plugin_error(PluginId id);
 void cant_find_plugin_error(PluginId baseid, PluginId search_id);
 
-template <typename BaseType>
-void choose_plugin();
 
 template <typename BaseType>
 struct PluginDef {
@@ -56,7 +86,7 @@ struct PluginDef {
 	PluginDef<BaseType>* children = nullptr;
 	
 	PluginDef(PluginId newid): id(newid), level(0) {
-		plugin_choosers()->push_back(choose_plugin<BaseType>);
+		pluginloader()->add_plugin<BaseType>();
 	}
 	
 	PluginDef(PluginId newid, PluginDef<BaseType>* parent): id(newid) {
@@ -72,6 +102,18 @@ struct PluginDef {
 	
 	PluginDef<BaseType>* find(PluginId search_id);
 	PluginDef<BaseType>* find_deepest();
+};
+
+
+template <typename VarType, VarType* pointer>
+struct ParamDef {
+	ParamDef(const char* name) {
+		pluginloader()->add_param<VarType,pointer>(name);
+	}
+	ParamDef<VarType,pointer>& operator=(const VarType& val) {
+		*pointer = val;
+		return *this;
+	}
 };
 
 
@@ -244,30 +286,12 @@ The parameters are:
 #define REQUIRE_PLUGIN(oldname, newname, NewType) \
 	RequirePlugin<NewType> newname = RequirePlugin<NewType>(&oldname);
 
+#define PARAM(var) var; static const ParamDef<decltype(var),&var> UNIQUENAME(var) = ParamDef<decltype(var),&var>(#var)
 
 template <typename T>
 void plugdelete(T* ptr) {
 	ptr->get_plugindef()->delfunc(ptr);
 }
-
-struct PluginReq {
-	PluginId baseplugin;
-	PluginId reqplugin;
-};
-
-class PluginLoader {
-public:
-	vector<PluginReq> requirements;
-	PluginLoader();
-	void load(int numargs, char** args);
-	void choose_plugins();
-	void parse_request(string request);
-	
-	string find_path(string search_path);
-};
-
-extern PluginLoader pluginloader;
-
 
 
 
@@ -285,7 +309,7 @@ template <typename BaseType>
 void choose_plugin() {
 	cout << "Choosing plugin " << BaseType::plugindef()->id << " = ";
 	PluginDef<BaseType> *chosen_def = BaseType::plugindef();
-	for (PluginReq& req : pluginloader.requirements) {
+	for (PluginReq& req : pluginloader()->requirements) {
 		if (req.baseplugin == BaseType::plugindef()->id) {
 			chosen_def = chosen_def->find(req.reqplugin);
 			if (chosen_def == nullptr) {
@@ -301,6 +325,24 @@ void choose_plugin() {
 		cout << endl;
 	}
 }
+
+template <typename VarType, VarType* varptr>
+void parse_parameter(istream& input) {
+	input >> *varptr;
+}
+
+
+template <typename BaseType>
+void PluginLoader::add_plugin() {
+	plugin_choosers.push_back(choose_plugin<BaseType>);
+}
+
+template <typename VarType, VarType* pointer>
+void PluginLoader::add_param(string name) {
+	params.push_back({name, parse_parameter<VarType,pointer>});
+}
+
+
 
 template <typename BaseType>
 PluginDef<BaseType>* PluginDef<BaseType>::find(PluginId search_id) {

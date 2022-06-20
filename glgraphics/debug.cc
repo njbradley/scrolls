@@ -5,8 +5,8 @@ GLDebugLines::GLDebugLines() {
 	glGenVertexArrays(1, &vertexid);
 	
 	program = LoadShaders(
-		pluginloader.find_path("shaders/lines.vs").c_str(),
-		pluginloader.find_path("shaders/lines.fs").c_str()
+		pluginloader()->find_path("shaders/lines.vs").c_str(),
+		pluginloader()->find_path("shaders/lines.fs").c_str()
 	);
 	
 	glBindVertexArray(vertexid);

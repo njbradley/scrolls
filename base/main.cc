@@ -4,7 +4,7 @@
 
 
 int main(int numargs, char** args) {
-	pluginloader.load(numargs-1, args+1);
+	pluginloader()->load(numargs-1, args+1);
 	
 	// Game* game = new SingleGame();
 	Game* game = Game::plugnew();

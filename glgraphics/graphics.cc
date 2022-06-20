@@ -172,9 +172,9 @@ void GLGraphics::init_graphics() {
 	glGenVertexArrays(1, &vertexarray);
 	
 	block_program = LoadShadersGeo(
-		pluginloader.find_path("shaders/block.vs").c_str(),
-		pluginloader.find_path("shaders/block.fs").c_str(),
-		pluginloader.find_path("shaders/block.gs").c_str()
+		pluginloader()->find_path("shaders/block.vs").c_str(),
+		pluginloader()->find_path("shaders/block.fs").c_str(),
+		pluginloader()->find_path("shaders/block.gs").c_str()
 	);
 	
 	pMatID = glGetUniformLocation(block_program, "Pmat");
@@ -197,7 +197,7 @@ void GLGraphics::init_graphics() {
 
 void GLGraphics::load_textures() {
   vector<string> paths;
-  for (std::filesystem::path path : std::filesystem::directory_iterator(pluginloader.find_path("textures/blocks/"))) {
+  for (std::filesystem::path path : std::filesystem::directory_iterator(pluginloader()->find_path("textures/blocks/"))) {
     paths.push_back(path.string());
   }
   
