@@ -54,10 +54,10 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 							visible = true;
 						}
 					}
-				} else {
-					data.facedata.faces[dir].texture = block->value;
-					visible = true;
-				}
+				} // else {
+				// 	data.facedata.faces[dir].texture = block->value;
+				// 	visible = true;
+				// }
 					
 			}
 			

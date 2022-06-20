@@ -24,7 +24,24 @@ NodePtr NodePtr::parent() const {
 	return NodeView();
 }
 
+NodePtr NodePtr::freeparent() const {
+	if (isfreenode()) {
+		return NodePtr(freenode()->highparent);
+	}
+	return NodeView();
+}
+
 NodePtr NodePtr::freechild() const {
+	if (hasfreechild()) {
+		return NodePtr(node->freechild);
+	}
+	return NodePtr();
+}
+
+NodePtr NodePtr::freesibling() const {
+	if (hasfreesibling()) {
+		return NodePtr(freenode()->next);
+	}
 	return NodePtr();
 }
 
@@ -56,6 +73,22 @@ void NodePtr::subdivide() {
 		}
 	}
 	delete oldblock;
+}
+
+void NodePtr::remove_freechild() {
+	if (isfreenode()) {
+		freenode()->highparent->freechild = freenode()->next;
+		del_tree(node);
+		delete freenode();
+		invalidate();
+	}
+}
+
+void NodePtr::add_freechild() {
+	FreeNode* newfree = new FreeNode();
+	newfree->next = node->freechild;
+	newfree->highparent = node;
+	node->freechild = newfree;
 }
 
 void NodePtr::set_flag(uint32 flag) {
@@ -164,7 +197,8 @@ NodeView NodeView::child(NodeIndex index) const {
 		return NodeView(
 			node->children + index,
 			position + scale / BDIMS * ivec3(index),
-			scale / BDIMS
+			scale / BDIMS,
+			highparent
 		);
 	}
 	return NodeView();
@@ -175,7 +209,8 @@ NodeView NodeView::sibling(NodeIndex index) const {
 		return NodeView(
 			node + (int(index) - int(parentindex())),
 			position + ivec3(index) * scale - ivec3(parentindex()) * scale,
-			scale
+			scale,
+			highparent
 		);
 	}
 	return NodeView();
@@ -186,13 +221,41 @@ NodeView NodeView::parent() const {
 		return NodeView(
 			node->parent,
 			position - ivec3(parentindex()) * scale,
-			scale * BDIMS
+			scale * BDIMS,
+			highparent
 		);
 	}
 	return NodeView();
 }
 
+NodeView NodeView::freeparent() const {
+	if (isfreenode()) {
+		return *highparent;
+	}
+	return NodeView();
+}
+
 NodeView NodeView::freechild() const {
+	if (hasfreechild()) {
+		return NodeView(
+			node->freechild,
+			ivec3(0,0,0),
+			scale / BDIMS,
+			std::shared_ptr<NodeView>(new NodeView(*this))
+		);
+	}
+	return NodeView();
+}
+
+NodeView NodeView::freesibling() const {
+	if (hasfreesibling()) {
+		return NodeView(
+			freenode()->next,
+			ivec3(0,0,0),
+			scale,
+			highparent
+		);
+	}
 	return NodeView();
 }
 
@@ -201,7 +264,7 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 	IHitCube goalbox (pos, goalscale);
 	while (!result.contains(goalbox)) {
 		if (!result.hasparent()) {
-			if (result.hasfreecontainer()) {
+			if (result.isfreenode()) {
 				return NodeView();
 			} else if (result.hascontainer()) {
 				return result.container()->get_global(pos, goalscale);
@@ -219,6 +282,80 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 
 
 
+FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, std::shared_ptr<FreeNodeView> hparent):
+NodePtr(node), HitCube(hparent->transform_out(HitCube(lpos, nscale, quat(1,0,0,0)))), localpos(lpos), highparent(hparent) {
+	
+}
+
+
+
+FreeNodeView FreeNodeView::child(NodeIndex index) const {
+	if (haschildren()) {
+		return FreeNodeView(
+			node->children + index,
+			localpos + scale / BDIMS * ivec3(index),
+			scale / BDIMS,
+			highparent
+		);
+	}
+	return FreeNodeView();
+}
+
+FreeNodeView FreeNodeView::sibling(NodeIndex index) const {
+	if (hasparent()) {
+		return FreeNodeView(
+			node + (int(index) - int(parentindex())),
+			localpos + ivec3(index) * scale - ivec3(parentindex()) * scale,
+			scale,
+			highparent
+		);
+	}
+	return FreeNodeView();
+}
+
+FreeNodeView FreeNodeView::parent() const {
+	if (hasparent()) {
+		return FreeNodeView(
+			node->parent,
+			localpos - ivec3(parentindex()) * scale,
+			scale * BDIMS,
+			highparent
+		);
+	}
+	return FreeNodeView();
+}
+
+FreeNodeView FreeNodeView::freeparent() const {
+	if (isfreenode()) {
+		return *highparent;
+	}
+	return FreeNodeView();
+}
+
+FreeNodeView FreeNodeView::freechild() const {
+	if (hasfreechild()) {
+		return FreeNodeView(
+			node->freechild,
+			ivec3(0,0,0),
+			scale / BDIMS,
+			std::shared_ptr<FreeNodeView>(new FreeNodeView(*this))
+		);
+	}
+	return FreeNodeView();
+}
+
+FreeNodeView FreeNodeView::freesibling() const {
+	if (hasfreesibling()) {
+		return FreeNodeView(
+			freenode()->next,
+			ivec3(0,0,0),
+			scale,
+			highparent
+		);
+	}
+	return FreeNodeView();
+}
+
 
 
 
@@ -229,17 +366,6 @@ BlockView::BlockView() {
 BlockView::BlockView(const NodeView& view): NodeView(view) {
 	ASSERT(hasblock());
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 

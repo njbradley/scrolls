@@ -26,6 +26,13 @@ struct IHitCube {
 	bool collides(ivec3 point) const;
 	bool collides(const IHitCube& other) const;
 	
+	ivec3 transform_in(ivec3 point) const;
+	vec3 transform_in(vec3 point) const;
+	ivec3 transform_out(ivec3 point) const;
+	vec3 transform_out(vec3 point) const;
+	IHitCube transform_in(const IHitCube& cube) const;
+	IHitCube transform_out(const IHitCube& cube) const;
+	
 	friend IHitCube operator+(const IHitCube& cube, ivec3 pos);
 	friend IHitCube operator+(ivec3 pos, const IHitCube& cube);
 	IHitCube& operator+=(ivec3 pos);
@@ -34,10 +41,11 @@ struct IHitCube {
 
 struct HitCube {
 	vec3 position;
-	float scale;
+	int scale;
 	quat rotation;
 	
 	HitCube();
+	HitCube(const IHitCube& icube);
 	HitCube(vec3 pos, int nscale, quat rot);
 	
 	bool contains(vec3 point) const;
@@ -45,6 +53,11 @@ struct HitCube {
 	
 	bool collides(vec3 point) const;
 	bool collides(const HitCube& other) const;
+	
+	vec3 transform_in(vec3 point) const;
+	vec3 transform_out(vec3 point) const;
+	HitCube transform_in(const HitCube& cube) const;
+	HitCube transform_out(const HitCube& cube) const;
 };
 
 
@@ -66,6 +79,24 @@ inline ivec3 IHitCube::midpoint() const {
 	return position + scale/2;
 }
 
+inline ivec3 IHitCube::transform_in(ivec3 point) const {
+	return point - position;
+}
+
+inline vec3 IHitCube::transform_in(vec3 point) const {
+	return point - vec3(position);
+}
+
+inline ivec3 IHitCube::transform_out(ivec3 point) const {
+	return point + position;
+}
+
+inline vec3 IHitCube::transform_out(vec3 point) const {
+	return point + vec3(position);
+}
+
+
+
 inline IHitCube operator+(const IHitCube& cube, ivec3 pos) {
 	return IHitCube(cube.position + pos * cube.scale, cube.scale);
 }
@@ -79,6 +110,26 @@ inline IHitCube& IHitCube::operator+=(ivec3 pos) {
 	return *this;
 }
 
+
+
+inline HitCube::HitCube() {
 	
+}
+
+inline HitCube::HitCube(const IHitCube& icube): position(icube.position), scale(icube.scale), rotation(1,0,0,0) {
+	
+}
+
+inline HitCube::HitCube(vec3 pos, int nscale, quat rot): position(pos), scale(nscale), rotation(rot) {
+	
+}
+
+inline vec3 HitCube::transform_in(vec3 point) const {
+	return glm::inverse(rotation) * (point - position);
+}
+
+inline vec3 HitCube::transform_out(vec3 point) const {
+	return rotation * point + position;
+}
 
 #endif

@@ -25,3 +25,30 @@ bool IHitCube::collides(const IHitCube& other) const {
 			and ((position.z <= other.position.z and position.z + scale > other.position.z)
 			or (other.position.z <= position.z and other.position.z + other.scale > position.z));
 }
+
+
+
+HitCube HitCube::transform_in(const HitCube& cube) const {
+	return HitCube(transform_in(cube.position), cube.scale, glm::inverse(rotation) * cube.rotation);
+}
+
+HitCube HitCube::transform_out(const HitCube& cube) const {
+	return HitCube(transform_out(cube.position), cube.scale, rotation * cube.rotation);
+}
+
+bool HitCube::contains(vec3 point) const {
+	point = transform_in(point);
+	return point.x >= position.x and point.y >= position.y and point.z >= position.z
+				and point.x <= position.x + scale and point.y <= position.y + scale and point.z <= position.z + scale;
+}
+
+bool HitCube::collides(vec3 point) const {
+	point = transform_in(point);
+	return point.x > position.x and point.y > position.y and point.z > position.z
+			and point.x < position.x + scale and point.y < position.y + scale and point.z < position.z + scale;
+}
+
+bool HitCube::collides(const HitCube& globalother) const {
+	HitCube other = transform_in(globalother);
+	return false;
+}

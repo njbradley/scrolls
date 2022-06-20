@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include "entity.h"
+#include <memory>
 
 // Number of times a block splits
 #define BDIMS 2
@@ -92,19 +93,20 @@ struct Node {
 	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
 	uint8 lastval = -1;
+	uint8 max_depth = 0;
 };
 
 struct FreeNode : Node {
-	Node* highparent = nullptr;
+	Node* highparent;
 	FreeNode* next = nullptr;
 	quat rotation;
 	vec3 offset;
 	
 	FreeNode();
 };
-	
-	
-	
+
+
+
 
 // struct that represents an index into
 // a inner node
@@ -148,9 +150,9 @@ public:
 	bool haschildren() const;
 	bool hasparent() const;
 	bool hascontainer() const;
-	bool hasfreecontainer() const;
+	bool isfreenode() const;
 	bool hasfreechild() const;
-	bool hasnextfree() const;
+	bool hasfreesibling() const;
 	
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
@@ -165,7 +167,8 @@ public:
 	
 	BlockContainer* container();
 	const BlockContainer* container() const;
-	NodePtr freecontainer() const;
+	FreeNode* freenode();
+	const FreeNode* freenode() const;
 	
 	// turns the current view into an invaid instance
 	// basically the same as node = NodeView()
@@ -176,7 +179,9 @@ public:
 	NodePtr sibling(NodeIndex index) const;
 	// returns a new view to the child at the given index.
 	NodePtr child(NodeIndex index) const;
+	NodePtr freeparent() const;
 	NodePtr freechild() const;
+	NodePtr freesibling() const;
 	
 	// turns a leaf node into an inner node, and
 	// creates 8 child nodes
@@ -184,8 +189,13 @@ public:
 	// turns an inner node into a leaf node, deleting
 	// all children previously on the node
 	void join();
-	
 	void subdivide();
+	
+	// if the nodeptr currently points to a freenode, then
+	// it is removed, and the pointer is no longer valid
+	void remove_freechild();
+	// adds a freechild to the current node
+	void add_freechild();
 	
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
@@ -235,14 +245,17 @@ public:
 	NodeView();
 	NodeView(NodePtr node, IHitCube cube);
 	NodeView(NodePtr node, ivec3 gpos, int nscale);
+	NodeView(NodePtr node, ivec3 gpos, int nscale, std::shared_ptr<NodeView> hparent);
 	// explicit NodeView(NodePtr node)
 	
-	// returns a new view to the parent node
+	// see comments in NodePtr
 	NodeView parent() const;
 	NodeView sibling(NodeIndex index) const;
-	// returns a new view to the child at the given index.
 	NodeView child(NodeIndex index) const;
+	NodeView freeparent() const;
 	NodeView freechild() const;
+	NodeView freesibling() const;
+	
 	// returns a view of the block at the given position
 	// if the position is outside of the root node of the tree,
 	// an invalid view is returned.
@@ -254,17 +267,29 @@ public:
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
 	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
+	
+protected:
+	std::shared_ptr<NodeView> highparent;
 };
 
-// class FreeNodeView : public NodePtr, public HitCube {
-class FreeNodeView : public NodeView {
-	FreeNode* freecontainer = nullptr;
-	vec3 freecont_position;
+// class FreeNodeView : public NodeView, public HitCube {
+class FreeNodeView : public NodePtr, public HitCube {
 public:
+	ivec3 localpos;
 	
 	FreeNodeView();
-	FreeNodeView(const NodeView& node, FreeNode* freecont);
-	// explicit FreeNodeView(const NodeView& node);
+	explicit FreeNodeView(const NodeView& node);
+	FreeNodeView(NodePtr nodeptr, ivec3 lpos, int scale, std::shared_ptr<FreeNodeView> hparent);
+	
+	FreeNodeView parent() const;
+	FreeNodeView sibling(NodeIndex index) const;
+	FreeNodeView child(NodeIndex index) const;
+	FreeNodeView freeparent() const;
+	FreeNodeView freechild() const;
+	FreeNodeView freesibling() const;
+	
+protected:
+	std::shared_ptr<FreeNodeView> highparent;
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -286,7 +311,7 @@ protected:
 	using NodeView::join;
 	using NodeView::split;
 };
-	
+
 
 // this is the class that allocates and owns an octree
 // and all nodes
@@ -371,7 +396,6 @@ inline constexpr int NodeIndex::z() const {
 
 inline FreeNode::FreeNode() {
 	flags = Block::FREENODE_FLAG;
-	freecontainer = this;
 }
 
 
@@ -404,15 +428,15 @@ inline bool NodePtr::hasparent() const { ASSERT(isvalid());
 }
 
 inline bool NodePtr::hascontainer() const { ASSERT(isvalid());
-	return !hasparent() and !hasfreecontainer();
+	return !hasparent() and !isfreenode();
 }
 
-inline bool NodePtr::hasfreecontainer() const { ASSERT(isvalid());
+inline bool NodePtr::isfreenode() const { ASSERT(isvalid());
 	return node->flags & Block::FREENODE_FLAG;
 }
 
-inline bool NodePtr::hasnextfree() const { ASSERT(isvalid());
-	return hasfreecontainer() and node->freecontainer == node and node->freecontainer->next != nullptr;
+inline bool NodePtr::hasfreesibling() const { ASSERT(isvalid());
+	return isfreenode() and freenode()->next != nullptr;
 }
 
 inline uint32 NodePtr::test_flag(uint32 flag) const { ASSERT(isvalid());
@@ -437,6 +461,14 @@ inline BlockContainer* NodePtr::container() { ASSERT(isvalid() and hascontainer(
 
 inline const BlockContainer* NodePtr::container() const { ASSERT(isvalid() and hascontainer());
 	return node->container;
+}
+
+inline FreeNode* NodePtr::freenode() { ASSERT(isfreenode());
+	return (FreeNode*) node;
+}
+
+inline const FreeNode* NodePtr::freenode() const { ASSERT(isfreenode());
+	return (const FreeNode*) node;
 }
 
 inline void NodePtr::invalidate() {
@@ -468,6 +500,21 @@ inline NodeView::NodeView(NodePtr node, IHitCube cube): NodePtr(node), IHitCube(
 inline NodeView::NodeView(NodePtr node, ivec3 position, int scale): NodePtr(node), IHitCube(position, scale) {
 	
 }
+
+inline NodeView::NodeView(NodePtr node, ivec3 position, int scale, std::shared_ptr<NodeView> hparent):
+NodePtr(node), IHitCube(position, scale), highparent(hparent) {
+	
+}
+
+
+
+inline FreeNodeView::FreeNodeView() {
+	
+}
+
+// inline FreeNodeView::FreeNodeView(const NodeView& nodeview): NodeView(nodeview) {
+//
+// }
 
 template <template <typename> typename NodeIterT, typename ... Args>
 BlockIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
