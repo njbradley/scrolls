@@ -233,6 +233,49 @@ protected:
 
 
 
+template <typename T>
+struct RefCounted : public T {
+	using T::T;
+	RefCounted(const T& other): T(other) {}
+	int refcount = 0;
+	
+	void incref() {
+		refcount ++;
+	}
+	void decref() {
+		refcount --;
+		if (refcount == 0) delete this;
+	}
+};
+
+template <typename T>
+struct RefCounter {
+	RefCounted<T>* pointer = nullptr;
+	
+	RefCounter() {}
+	RefCounter(RefCounted<T>* ptr): pointer(ptr) {
+		if (pointer != nullptr) pointer->incref();
+	}
+	RefCounter(const RefCounter<T>& other): RefCounter(other.pointer) {}
+	RefCounter(RefCounter<T>&& other) {
+		std::swap(pointer, other.pointer);
+	}
+	~RefCounter() {
+		if (pointer != nullptr) pointer->decref();
+	}
+	
+	RefCounter<T>& operator=(RefCounter<T> other) {
+		std::swap(pointer, other.pointer);
+		return *this;
+	}
+	RefCounted<T>* operator->() { return pointer; }
+	const RefCounted<T>* operator->() const { return pointer; }
+	RefCounted<T>& operator*() { return *pointer; }
+	const RefCounted<T>& operator*() const { return *pointer; }
+	operator RefCounted<T>*() const { return pointer; }
+};
+
+
 // class that allows reading/modifying
 // of the octree
 // A nodeview points to a position on the block tree, while
@@ -245,7 +288,7 @@ public:
 	NodeView();
 	NodeView(NodePtr node, IHitCube cube);
 	NodeView(NodePtr node, ivec3 gpos, int nscale);
-	NodeView(NodePtr node, ivec3 gpos, int nscale, std::shared_ptr<NodeView> hparent);
+	NodeView(NodePtr node, ivec3 gpos, int nscale, RefCounted<NodeView>* hparent);
 	// explicit NodeView(NodePtr node)
 	
 	// see comments in NodePtr
@@ -269,7 +312,8 @@ public:
 	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
 	
 protected:
-	std::shared_ptr<NodeView> highparent;
+	RefCounter<NodeView> highparent;
+	// std::shared_ptr<NodeView> highparent;
 };
 
 // class FreeNodeView : public NodeView, public HitCube {
@@ -279,7 +323,7 @@ public:
 	
 	FreeNodeView();
 	explicit FreeNodeView(const NodeView& node);
-	FreeNodeView(NodePtr nodeptr, ivec3 lpos, int scale, std::shared_ptr<FreeNodeView> hparent);
+	FreeNodeView(NodePtr nodeptr, ivec3 lpos, int scale, RefCounted<FreeNodeView>* hparent);
 	
 	FreeNodeView parent() const;
 	FreeNodeView sibling(NodeIndex index) const;
@@ -289,7 +333,8 @@ public:
 	FreeNodeView freesibling() const;
 	
 protected:
-	std::shared_ptr<FreeNodeView> highparent;
+	RefCounter<FreeNodeView> highparent;
+	// std::shared_ptr<FreeNodeView> highparent;
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -399,6 +444,15 @@ inline FreeNode::FreeNode() {
 }
 
 
+
+
+
+
+
+
+
+
+
 inline NodePtr::NodePtr(): node(nullptr) {
 	
 }
@@ -501,7 +555,7 @@ inline NodeView::NodeView(NodePtr node, ivec3 position, int scale): NodePtr(node
 	
 }
 
-inline NodeView::NodeView(NodePtr node, ivec3 position, int scale, std::shared_ptr<NodeView> hparent):
+inline NodeView::NodeView(NodePtr node, ivec3 position, int scale, RefCounted<NodeView>* hparent):
 NodePtr(node), IHitCube(position, scale), highparent(hparent) {
 	
 }

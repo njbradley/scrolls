@@ -198,7 +198,7 @@ NodeView NodeView::child(NodeIndex index) const {
 			node->children + index,
 			position + scale / BDIMS * ivec3(index),
 			scale / BDIMS,
-			highparent
+			(RefCounted<NodeView>*)(highparent)
 		);
 	}
 	return NodeView();
@@ -241,7 +241,7 @@ NodeView NodeView::freechild() const {
 			node->freechild,
 			ivec3(0,0,0),
 			scale / BDIMS,
-			std::shared_ptr<NodeView>(new NodeView(*this))
+			new RefCounted<NodeView>(*this)
 		);
 	}
 	return NodeView();
@@ -282,9 +282,9 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 
 
 
-FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, std::shared_ptr<FreeNodeView> hparent):
+FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, RefCounted<FreeNodeView>* hparent):
 NodePtr(node), HitCube(hparent->transform_out(HitCube(lpos, nscale, quat(1,0,0,0)))), localpos(lpos), highparent(hparent) {
-	
+	highparent->incref();
 }
 
 
@@ -338,7 +338,7 @@ FreeNodeView FreeNodeView::freechild() const {
 			node->freechild,
 			ivec3(0,0,0),
 			scale / BDIMS,
-			std::shared_ptr<FreeNodeView>(new FreeNodeView(*this))
+			new RefCounted<FreeNodeView>(*this)
 		);
 	}
 	return FreeNodeView();
