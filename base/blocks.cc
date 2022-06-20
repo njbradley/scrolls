@@ -285,7 +285,7 @@ BlockContainer* BlockContainer::find_neighbor(ivec3 pos, int goalscale) {
 NodeView BlockContainer::get_global(ivec3 pos, int goal_scale) {
 	IHitCube goalbox (pos, goal_scale);
 	if (contains(goalbox)) {
-		return get_global(pos, goal_scale);
+		return NodeView::get_global(pos, goal_scale);
 	}
 	
 	BlockContainer* other = find_neighbor(pos, goal_scale);

@@ -27,7 +27,7 @@ DEFINE_PLUGIN(Game);
 EXPORT_PLUGIN(SingleTreeGame);
 EXPORT_PLUGIN(SingleGame);
 
-const int worldsize = 64;
+const int worldsize = 256;
 
 const int renderdistance = worldsize;  // FIX THIS VARIABLE NAME
 const int chunkloadingstart = 3;
