@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#include "entity.h"
+#include "physics.h"
 #include "memory.h"
 
 // Number of times a block splits
@@ -55,7 +55,7 @@ subdivided would be the leaf nodes. The example is also in 2d so there are
 only 4 children, but real nodes are 3d and have 8 children
 
 When manipulating nodes in the tree, you will rarely interact
-with raw Node* pointers, instead use the NodeView and similar
+with raw Node* pointers, instead use the NodePtr and similar
 classes, which wrap a Node* pointer with helpful functions and
 bookeeping of size and position
 */
@@ -70,9 +70,11 @@ struct Block {
 		PROPOGATING_FLAGS = 0xffff0000,
 		STRUCTURE_FLAGS = 0x000000ff,
 		RENDER_FLAG = 0x00010000,
+		GENERATION_FLAG = 0x00020000,
 		CHILDREN_FLAG = 0x00000001,
 		PARENT_FLAG = 0x00000002,
-		FREENODE_FLAG = 0x00000004
+		FREENODE_FLAG = 0x00000004,
+		ENTITY_FLAG = 0x00000008
 	};
 	
 	Block();
@@ -92,7 +94,6 @@ struct Node {
 	};
 	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
-	uint8 lastval = -1;
 	uint8 max_depth = 0;
 };
 
@@ -112,7 +113,7 @@ struct FreeNode : Node {
 // a inner node
 // can be used to convert between a position
 // in child space (ie 0,1,0) to an index
-// in the children array (ie 4)
+// in the children array (ie 2)
 struct NodeIndex {
 	const int index;
 	
@@ -126,7 +127,31 @@ struct NodeIndex {
 	constexpr int y() const;
 	constexpr int z() const;
 };
+
+
+struct NodeChildrenIter {
+	struct iterator {
+		Node* curnode;
+		
+		iterator& operator++();
+		Node* operator*();
+		bool operator!=(iterator other);
+	};
 	
+	struct const_iterator {
+		const Node* curnode;
+		
+		const_iterator& operator++();
+		const Node* operator*();
+		bool operator!=(const_iterator other);
+	};
+	
+	iterator begin();
+	iterator end();
+	const_iterator begin() const;
+	const_iterator end() const;
+};
+
 
 // Class that represents a pointer to a Node in an octree.
 //
@@ -148,6 +173,7 @@ public:
 	bool hasblock() const;
 	// whether the node has children (accesed by child())
 	bool haschildren() const;
+	bool hassiblings() const;
 	bool hasparent() const;
 	bool hascontainer() const;
 	bool isfreenode() const;
@@ -157,6 +183,7 @@ public:
 	// the index where this node is in the parent node
 	// ie: node.parent().child(node.parentindex()) == node
 	NodeIndex parentindex() const;
+	int max_depth() const;
 	
 	// the block stored at this node
 	// warning: if no block is stored, a possibly random pointer will
@@ -179,7 +206,6 @@ public:
 	NodePtr sibling(NodeIndex index) const;
 	// returns a new view to the child at the given index.
 	NodePtr child(NodeIndex index) const;
-	NodePtr freeparent() const;
 	NodePtr freechild() const;
 	NodePtr freesibling() const;
 	
@@ -207,6 +233,7 @@ public:
 	// this method should be called whenever the structure or value of
 	// a node is changed
 	void on_change();
+	void update_depth();
 	
 	// modify the block that this node holds.
 	void set_block(Block* block);
@@ -221,6 +248,7 @@ public:
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
 	BlockIterable<NodeIterT<NodePtr>> iter(Args ... args);
+	BlockIterable<ChildIter<NodePtr>> children();
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
@@ -229,6 +257,15 @@ protected:
 	
 	void copy_tree(Node* src, Node* dest);
 	void del_tree(Node* node);
+	void update_child(Node* child);
+	
+	NodeChildrenIter childreniter();
+	const NodeChildrenIter childreniter() const;
+	
+	template <typename NodePtrT>
+	friend class NodeIter;
+	template <typename NodePtrT>
+	friend class ChildIter;
 };
 
 
@@ -253,7 +290,6 @@ public:
 	NodeView parent() const;
 	NodeView sibling(NodeIndex index) const;
 	NodeView child(NodeIndex index) const;
-	NodeView freeparent() const;
 	NodeView freechild() const;
 	NodeView freesibling() const;
 	
@@ -268,6 +304,7 @@ public:
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
 	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
+	BlockIterable<ChildIter<NodeView>> children();
 	
 protected:
 	RefCounter<NodeView> highparent;
@@ -286,7 +323,6 @@ public:
 	FreeNodeView parent() const;
 	FreeNodeView sibling(NodeIndex index) const;
 	FreeNodeView child(NodeIndex index) const;
-	FreeNodeView freeparent() const;
 	FreeNodeView freechild() const;
 	FreeNodeView freesibling() const;
 	
@@ -431,6 +467,10 @@ inline bool NodePtr::haschildren() const { ASSERT(isvalid());
 	return node->flags & Block::CHILDREN_FLAG;
 }
 
+inline bool NodePtr::hassiblings() const { ASSERT(isvalid());
+	return (node->flags & Block::PARENT_FLAG) and !(node->flags & Block::FREENODE_FLAG);
+}
+
 inline bool NodePtr::hasfreechild() const { ASSERT(isvalid());
 	return node->freechild != nullptr;
 }
@@ -457,6 +497,10 @@ inline uint32 NodePtr::test_flag(uint32 flag) const { ASSERT(isvalid());
 
 inline NodeIndex NodePtr::parentindex() const { ASSERT(isvalid());
 	return node - node->parent->children;
+}
+
+inline int NodePtr::max_depth() const { ASSERT(isvalid());
+	return node->max_depth;
 }
 
 inline Block* NodePtr::block() { ASSERT(isvalid() and hasblock());
@@ -500,7 +544,6 @@ BlockIterable<NodeIterT<NodePtr>> NodePtr::iter(Args ... args) {
 	return {*this, args...};
 }
 
-
 inline NodeView::NodeView() {
 	
 }
@@ -532,7 +575,6 @@ template <template <typename> typename NodeIterT, typename ... Args>
 BlockIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
 	return {*this, args...};
 }
-
 
 inline Block* BlockView::operator->() {
 	return block();

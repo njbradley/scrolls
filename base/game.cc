@@ -6,7 +6,7 @@
 #include "terrain.h"
 #include "threadpool/pool.h"
 #include "debug.h"
-#include "entity.h"
+#include "physics.h"
 #include "fileformat.h"
 
 #include <set>
@@ -334,15 +334,42 @@ void SingleTreeGame::setup_gameloop() {
   
 	cout << getTime() - start << " Time render " << endl;
 	
-	start = getTime();
+  start = getTime();
 	int num = 0;
   
-  for (BlockView view : BlockIterable<BlockIter<NodeView>>(world)) {
+  for (NodeView view : BlockIterable<BlockIter<NodeView>>(world)) {
 		num ++;
 	}
 	
   cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
+  
+  NodeView node = world.get_global(ivec3(0,0,0), 4);
+  node.add_freechild();
+  node = node.freechild();
+  node.set_block(new Block(1));
+  node.subdivide();
+  
+  for (NodeView view : node.children()) {
+    cout << view.position << ' ' << view.scale << endl;
+    if (view.isfreenode()) {
+      cout << "FREE "<< view.position << ' ' << view.scale << endl;
+    }
+  }
+  
+  
+  start = getTime();
+	num = 0;
+  for (NodeView view : BlockIterable<BlockIter<NodeView>>(world)) {
+		num ++;
+    if (view.isfreenode()) {
+      cout << "FREE "<< view.position << ' ' << view.scale << endl;
+    }
+	}
+	cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+	
+  
+  
   start = getTime();
   num = 0;
 	for (NodePtr node : BlockIterable<BlockIter<NodePtr>>(world)) {

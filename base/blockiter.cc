@@ -13,6 +13,9 @@ void NodeIter<NodePtrT>::step_down() {
 		node = node.child(startpos());
 		// node.step_down(startpos());
 		get_safe();
+	} else if (node.hasfreechild()) {
+		node = node.freechild();
+		get_safe();
 	} else {
 		step_side();
 	}
@@ -23,10 +26,22 @@ void NodeIter<NodePtrT>::step_side() {
 	// cout << "step side " << position << ' ' << scale << endl;
 	if (!node.hasparent() or node == highest_node) {
 		finish();
+	} else if (node.isfreenode()) {
+		if (node.hasfreesibling()) {
+			node = node.freesibling();
+			get_safe();
+		} else {
+			node = node.parent();
+			step_side();
+		}
 	} else if (node.parentindex() == endpos()) {
-		// node.step_up();
 		node = node.parent();
-		step_side();
+		if (node.hasfreechild()) {
+			node = node.freechild();
+			get_safe();
+		} else {
+			step_side();
+		}
 	} else {
 		// node.step_side(increment_func(node.parentindex()));
 		node = node.sibling(increment_func(node.parentindex()));
@@ -57,6 +72,50 @@ NodeIter<NodePtrT> NodeIter<NodePtrT>::operator++() {
 template class NodeIter<NodePtr>;
 template class NodeIter<NodeView>;
 
+
+
+
+
+template <typename NodePtrT>
+ChildIter<NodePtrT>::ChildIter(const NodePtrT& nnode): node(nnode.child(0)) {
+
+}
+
+template <typename NodePtrT>
+ChildIter<NodePtrT> ChildIter<NodePtrT>::operator++() {
+	cout << node.node << ' ' << node.node->parent->children + (BDIMS3-1) << endl;
+	if (node.node == node.node->parent->children + (BDIMS3-1)) {
+		node = node.parent().freechild();
+	} else if (node.isfreenode()) {
+		if (node.hasfreesibling()) {
+			node = node.freesibling();
+		} else {
+			to_end();
+		}
+	} else {
+		node = node.sibling(node.parentindex() + 1);
+	}
+	return *this;
+}
+
+template <>
+ChildIter<NodePtr> ChildIter<NodePtr>::operator++() {
+	if (node.node == node.node->parent->children + BDIMS3) {
+		node = node.parent().freechild();
+	} else if (node.isfreenode()) {
+		if (node.hasfreesibling()) {
+			node = node.freesibling();
+		} else {
+			to_end();
+		}
+	} else {
+		node.node ++;
+	}
+	return *this;
+}
+
+template class ChildIter<NodePtr>;
+template class ChildIter<NodeView>;
 
 
 template <typename NodePtrT>

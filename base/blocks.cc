@@ -3,6 +3,12 @@
 
 
 
+
+
+
+
+
+
 NodePtr NodePtr::child(NodeIndex index) const {
 	if (haschildren()) {
 		return NodePtr(node->children + index);
@@ -20,13 +26,6 @@ NodePtr NodePtr::sibling(NodeIndex index) const {
 NodePtr NodePtr::parent() const {
 	if (hasparent()) {
 		return NodePtr(node->parent);
-	}
-	return NodeView();
-}
-
-NodePtr NodePtr::freeparent() const {
-	if (isfreenode()) {
-		return NodePtr(freenode()->highparent);
 	}
 	return NodeView();
 }
@@ -56,8 +55,7 @@ void NodePtr::split() {
 	if (node->block != nullptr) delete node->block;
 	node->children = new Node[BDIMS3];
 	for (int i = 0; i < BDIMS3; i ++) {
-		node->children[i].parent = node;
-		node->children[i].flags |= Block::PARENT_FLAG;
+		update_child(&node->children[i]);
 	}
 	node->flags |= Block::CHILDREN_FLAG;
 	on_change();
@@ -87,8 +85,8 @@ void NodePtr::remove_freechild() {
 void NodePtr::add_freechild() {
 	FreeNode* newfree = new FreeNode();
 	newfree->next = node->freechild;
-	newfree->highparent = node;
 	node->freechild = newfree;
+	update_child(newfree);
 }
 
 void NodePtr::set_flag(uint32 flag) {
@@ -128,7 +126,7 @@ void NodePtr::copy_tree(Node* src, Node* dest) {
 		dest->children = new Node[BDIMS3];
 		for (int i = 0; i < BDIMS3; i ++) {
 			copy_tree(&src->children[i], &dest->children[i]);
-			dest->children[i].parent = dest;
+			NodePtr(dest).update_child(&dest->children[i]);
 		}
 	} else if (src->block != nullptr) {
 		dest->block = new Block(*src->block);
@@ -155,12 +153,12 @@ void NodePtr::swap_tree(NodePtr other) {
 	std::swap(node->parent, other.node->parent);
 	if (haschildren()) {
 		for (int i = 0; i < BDIMS3; i ++) {
-			node->children[i].parent = node;
+			update_child(&node->children[i]);
 		}
 	}
 	if (other.haschildren()) {
 		for (int i = 0; i < BDIMS3; i ++) {
-			other.node->children[i].parent = other.node;
+			other.update_child(&other.node->children[i]);
 		}
 	}
 	set_flag(saved_flags);
@@ -175,6 +173,32 @@ void NodePtr::on_change() {
 	set_flag(Block::RENDER_FLAG);
 }
 
+void NodePtr::update_child(Node* child) {
+	child->parent = node;
+	child->flags |= Block::PARENT_FLAG;
+}
+
+void NodePtr::update_depth() {
+	if (haschildren()) {
+		uint8 max_depth = node->children[0].max_depth;
+		for (int i = 1; i < BDIMS3; i ++) {
+			max_depth = std::max(max_depth, node->children[i].max_depth);
+		}
+		if (max_depth+1 != node->max_depth) {
+			node->max_depth = max_depth+1;
+			if (hasparent()) {
+				parent().update_depth();
+			}
+		}
+	} else if (node->max_depth != 1) {
+		node->max_depth = 1;
+		if (hasparent()) {
+			parent().update_depth();
+		}
+	}
+}
+		
+
 void NodePtr::del_tree(Node* node) {
 	if (node->flags & Block::CHILDREN_FLAG) {
 		for (int i = 0; i < BDIMS3; i ++) {
@@ -188,6 +212,13 @@ void NodePtr::del_tree(Node* node) {
 }
 
 
+BlockIterable<ChildIter<NodeView>> NodeView::children() {
+	return iter<ChildIter>();
+}
+
+BlockIterable<ChildIter<NodePtr>> NodePtr::children() {
+	return iter<ChildIter>();
+}
 
 
 
@@ -205,7 +236,7 @@ NodeView NodeView::child(NodeIndex index) const {
 }
 
 NodeView NodeView::sibling(NodeIndex index) const {
-	if (hasparent()) {
+	if (hassiblings()) {
 		return NodeView(
 			node + (int(index) - int(parentindex())),
 			position + ivec3(index) * scale - ivec3(parentindex()) * scale,
@@ -218,19 +249,15 @@ NodeView NodeView::sibling(NodeIndex index) const {
 
 NodeView NodeView::parent() const {
 	if (hasparent()) {
+		if (isfreenode()) {
+			return *highparent;
+		}
 		return NodeView(
 			node->parent,
 			position - ivec3(parentindex()) * scale,
 			scale * BDIMS,
 			highparent
 		);
-	}
-	return NodeView();
-}
-
-NodeView NodeView::freeparent() const {
-	if (isfreenode()) {
-		return *highparent;
 	}
 	return NodeView();
 }
@@ -263,12 +290,10 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 	NodeView result = *this;
 	IHitCube goalbox (pos, goalscale);
 	while (!result.contains(goalbox)) {
-		if (!result.hasparent()) {
-			if (result.isfreenode()) {
-				return NodeView();
-			} else if (result.hascontainer()) {
-				return result.container()->get_global(pos, goalscale);
-			}
+		if (!result.hasparent() and result.hascontainer()) {
+			return result.container()->get_global(pos, goalscale);
+		} else if (result.isfreenode()) {
+			return NodeView();
 		}
 		result = result.parent();
 	}
@@ -302,7 +327,7 @@ FreeNodeView FreeNodeView::child(NodeIndex index) const {
 }
 
 FreeNodeView FreeNodeView::sibling(NodeIndex index) const {
-	if (hasparent()) {
+	if (hassiblings()) {
 		return FreeNodeView(
 			node + (int(index) - int(parentindex())),
 			localpos + ivec3(index) * scale - ivec3(parentindex()) * scale,
@@ -315,19 +340,15 @@ FreeNodeView FreeNodeView::sibling(NodeIndex index) const {
 
 FreeNodeView FreeNodeView::parent() const {
 	if (hasparent()) {
+		if (isfreenode()) {
+			return *highparent;
+		}
 		return FreeNodeView(
 			node->parent,
 			localpos - ivec3(parentindex()) * scale,
 			scale * BDIMS,
 			highparent
 		);
-	}
-	return FreeNodeView();
-}
-
-FreeNodeView FreeNodeView::freeparent() const {
-	if (isfreenode()) {
-		return *highparent;
 	}
 	return FreeNodeView();
 }

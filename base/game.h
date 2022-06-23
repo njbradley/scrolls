@@ -91,6 +91,7 @@ protected:
 	BlockContainer world;
 	
 	Spectator spectator;
+	// Player* player;
 	Controls* controls;
 };
 

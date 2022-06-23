@@ -38,6 +38,7 @@ class NodePtr;
 class NodeView;
 class FreeNodeView;
 template <typename NodePtrT> class NodeIter;
+template <typename NodePtrT> class ChildIter;
 class Block;
 class BlockView;
 template <typename NodePtrT> class BlockIter;

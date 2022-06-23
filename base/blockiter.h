@@ -37,7 +37,21 @@ protected:
 
 
 
+template <typename NodePtrT>
+class ChildIter {
+public:
+	NodePtrT node;
+	
+	ChildIter(const NodePtrT& newnode);
+	
+	ChildIter<NodePtrT> operator++();
+	NodePtrT& operator*();
+	
+	void get_safe() {}
+	void to_end();
 
+	bool operator!=(const ChildIter<NodePtrT>& other);
+};
 
 
 
@@ -159,6 +173,20 @@ inline bool NodeIter<NodePtrT>::operator!=(const NodeIter<NodePtrT>& other) {
 
 
 
+template <typename NodePtrT>
+inline NodePtrT& ChildIter<NodePtrT>::operator*() {
+	return node;
+}
+
+template <typename NodePtrT>
+inline void ChildIter<NodePtrT>::to_end() {
+	node.invalidate();
+}
+
+template <typename NodePtrT>
+inline bool ChildIter<NodePtrT>::operator!=(const ChildIter<NodePtrT>& other) {
+	return node != other.node;
+}
 
 
 #endif
