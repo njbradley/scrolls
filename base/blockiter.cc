@@ -71,6 +71,7 @@ NodeIter<NodePtrT> NodeIter<NodePtrT>::operator++() {
 
 template class NodeIter<NodePtr>;
 template class NodeIter<NodeView>;
+template class NodeIter<FreeNodeView>;
 
 
 
@@ -116,6 +117,7 @@ ChildIter<NodePtr> ChildIter<NodePtr>::operator++() {
 
 template class ChildIter<NodePtr>;
 template class ChildIter<NodeView>;
+template class ChildIter<FreeNodeView>;
 
 
 template <typename NodePtrT>
@@ -135,3 +137,4 @@ NodeIndex DirNodeIter<NodePtrT>::increment_func(NodeIndex nodepos) {
 
 template class DirNodeIter<NodePtr>;
 template class DirNodeIter<NodeView>;
+template class DirNodeIter<FreeNodeView>;

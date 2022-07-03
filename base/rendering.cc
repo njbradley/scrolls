@@ -20,19 +20,18 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	bool changed = false;
 	
 	// for (BlockView block : BlockIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
-	for (NodeView& node : BlockIterable<FlagNodeIter<NodeView>>(mainblock, Block::RENDER_FLAG)) {
+	for (FreeNodeView& node : FreeNodeView(mainblock).iter<FlagNodeIter>(Block::RENDER_FLAG)) {
 		node.reset_flag(Block::RENDER_FLAG);
 		if (!node.hasblock()) continue;
-		BlockView block = node;
+		BlockView block = NodeView(node);
 		// continue;
 		if (block->value != 0) {
 			RenderData data;
 			bool visible = false;
 			
 			// cout << "BEGIN BLOCK " << block.position << ' ' << block.scale << endl;
-			
-			data.posdata.pos = vec3(block.position) + float(block.scale) / 2;
-			data.posdata.scale = block.scale;
+			data.posdata.pos = node.transform_out(vec3(node.scale)/2.0f);
+			data.posdata.scale = node.scale;
 			
 			for (Direction dir : Direction::all) {
 				data.facedata.faces[dir].texture = 0;
@@ -54,10 +53,10 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 							visible = true;
 						}
 					}
-				} // else {
-				// 	data.facedata.faces[dir].texture = block->value;
-				// 	visible = true;
-				// }
+				} else if (node.isfreenode()) {
+					data.facedata.faces[dir].texture = block->value;
+					visible = true;
+				}
 					
 			}
 			

@@ -50,5 +50,10 @@ bool HitCube::collides(vec3 point) const {
 
 bool HitCube::collides(const HitCube& globalother) const {
 	HitCube other = transform_in(globalother);
+	
+	float x_proj = 5;
+	
+	
+	
 	return false;
 }

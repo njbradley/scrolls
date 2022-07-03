@@ -48,6 +48,7 @@ void NodePtr::join() {
 	del_tree(node);
 	node->flags &= ~Block::CHILDREN_FLAG;
 	node->block = nullptr;
+	update_depth();
 	on_change();
 }
 
@@ -58,6 +59,7 @@ void NodePtr::split() {
 		update_child(&node->children[i]);
 	}
 	node->flags |= Block::CHILDREN_FLAG;
+	update_depth();
 	on_change();
 }
 
@@ -75,18 +77,22 @@ void NodePtr::subdivide() {
 
 void NodePtr::remove_freechild() {
 	if (isfreenode()) {
-		freenode()->highparent->freechild = freenode()->next;
+		node->parent->freechild = freenode()->next;
+		parent().update_depth();
 		del_tree(node);
 		delete freenode();
 		invalidate();
 	}
 }
 
-void NodePtr::add_freechild() {
+void NodePtr::add_freechild(vec3 offset, quat rotation) {
 	FreeNode* newfree = new FreeNode();
+	newfree->offset = offset;
+	newfree->rotation = rotation;
 	newfree->next = node->freechild;
 	node->freechild = newfree;
 	update_child(newfree);
+	update_depth();
 }
 
 void NodePtr::set_flag(uint32 flag) {
@@ -141,6 +147,9 @@ void NodePtr::copy_tree(NodePtr other) {
 	copy_tree(other.node, node);
 	node->parent = oldparent;
 	set_flag(saved_flags);
+	if (hasparent()) {
+		parent().update_depth();
+	}
 	on_change();
 }
 
@@ -167,6 +176,9 @@ void NodePtr::swap_tree(NodePtr other) {
 	other.parentindex();
 	set_flag(node->flags);
 	other.set_flag(other.node->flags);
+	if (hasparent()) {
+		parent().update_depth();
+	}
 }
 
 void NodePtr::on_change() {
@@ -179,25 +191,28 @@ void NodePtr::update_child(Node* child) {
 }
 
 void NodePtr::update_depth() {
+	uint8 new_depth = 0;
 	if (haschildren()) {
-		uint8 max_depth = node->children[0].max_depth;
-		for (int i = 1; i < BDIMS3; i ++) {
-			max_depth = std::max(max_depth, node->children[i].max_depth);
+		for (int i = 0; i < BDIMS3; i ++) {
+			new_depth = std::max(new_depth, uint8(node->children[i].max_depth+1));
 		}
-		if (max_depth+1 != node->max_depth) {
-			node->max_depth = max_depth+1;
-			if (hasparent()) {
-				parent().update_depth();
-			}
+	}
+	if (hasfreechild()) {
+		for (FreeNode* free = node->freechild; free != nullptr; free = free->next) {
+			new_depth = std::max(new_depth, uint8(free->max_depth+1));
 		}
-	} else if (node->max_depth != 1) {
-		node->max_depth = 1;
+	}
+	update_depth(new_depth);
+}
+
+void NodePtr::update_depth(uint8 new_depth) {
+	if (new_depth != node->max_depth) {
+		node->max_depth = new_depth;
 		if (hasparent()) {
 			parent().update_depth();
 		}
 	}
 }
-		
 
 void NodePtr::del_tree(Node* node) {
 	if (node->flags & Block::CHILDREN_FLAG) {
@@ -211,10 +226,6 @@ void NodePtr::del_tree(Node* node) {
 	node->children = nullptr;
 }
 
-
-BlockIterable<ChildIter<NodeView>> NodeView::children() {
-	return iter<ChildIter>();
-}
 
 BlockIterable<ChildIter<NodePtr>> NodePtr::children() {
 	return iter<ChildIter>();
@@ -305,13 +316,35 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 	return result;
 }
 
-
-
-FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, RefCounted<FreeNodeView>* hparent):
-NodePtr(node), HitCube(hparent->transform_out(HitCube(lpos, nscale, quat(1,0,0,0)))), localpos(lpos), highparent(hparent) {
-	highparent->incref();
+BlockIterable<ChildIter<NodeView>> NodeView::children() {
+	return iter<ChildIter>();
 }
 
+
+
+HitCube transform_out_hparent(HitCube input, RefCounted<FreeNodeView>* hparent) {
+	if (hparent != nullptr) {
+		return hparent->transform_out(input);
+	}
+	return input;
+}
+
+FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, RefCounted<FreeNodeView>* hparent):
+NodePtr(node), HitCube(transform_out_hparent(HitCube(lpos, nscale, quat(1,0,0,0)), hparent)), localpos(lpos), highparent(hparent) {
+	
+}
+
+FreeNodeView::FreeNodeView(const NodeView& nodeview): NodePtr(nodeview), HitCube(nodeview.position, nodeview.scale, quat(1,0,0,0)), localpos(nodeview.position), highparent(nullptr) {
+
+}
+
+void FreeNodeView::recalculate_position() {
+	if (highparent != nullptr) {
+		HitCube::operator=(highparent->transform_out(HitCube(localpos, scale, quat(1,0,0,0))));
+	} else {
+		HitCube::operator=(HitCube(localpos, scale, quat(1,0,0,0)));
+	}
+}
 
 
 FreeNodeView FreeNodeView::child(NodeIndex index) const {
@@ -341,7 +374,7 @@ FreeNodeView FreeNodeView::sibling(NodeIndex index) const {
 FreeNodeView FreeNodeView::parent() const {
 	if (hasparent()) {
 		if (isfreenode()) {
-			return *highparent;
+			return FreeNodeView(highparent->node, highparent->localpos, highparent->scale, highparent->highparent);
 		}
 		return FreeNodeView(
 			node->parent,
@@ -355,11 +388,14 @@ FreeNodeView FreeNodeView::parent() const {
 
 FreeNodeView FreeNodeView::freechild() const {
 	if (hasfreechild()) {
+		RefCounted<FreeNodeView>* hparent = new RefCounted<FreeNodeView>(*this);
+		hparent->position += node->freechild->offset;
+		hparent->rotation *= node->freechild->rotation;
 		return FreeNodeView(
 			node->freechild,
 			ivec3(0,0,0),
 			scale / BDIMS,
-			new RefCounted<FreeNodeView>(*this)
+			hparent
 		);
 	}
 	return FreeNodeView();
@@ -367,16 +403,26 @@ FreeNodeView FreeNodeView::freechild() const {
 
 FreeNodeView FreeNodeView::freesibling() const {
 	if (hasfreesibling()) {
+		RefCounted<FreeNodeView>* hparent = new RefCounted<FreeNodeView>(highparent->node, highparent->localpos, highparent->scale, highparent->highparent);
+		hparent->position += freenode()->next->offset;
+		hparent->rotation *= freenode()->next->rotation;
 		return FreeNodeView(
 			freenode()->next,
 			ivec3(0,0,0),
 			scale,
-			highparent
+			hparent
 		);
 	}
 	return FreeNodeView();
 }
 
+FreeNodeView::operator NodeView() const {
+	return NodeView(node, localpos, scale);
+}
+
+BlockIterable<ChildIter<FreeNodeView>> FreeNodeView::children() {
+	return iter<ChildIter>();
+}
 
 
 

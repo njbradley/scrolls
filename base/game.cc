@@ -345,18 +345,35 @@ void SingleTreeGame::setup_gameloop() {
 	
   
   NodeView node = world.get_global(ivec3(0,0,0), 4);
-  node.add_freechild();
+  node = node.parent();
+  
+  //for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
+  //    cout << view.position << ' ' << view.scale << endl;
+  //    if (view.isfreenode()) {
+  //      cout << "FREE "<< view.position << ' ' << view.scale << endl;
+  //    }
+  //}
+  
+  cout << "adding stuff" << endl;
+  node = world.get_global(ivec3(0,0,0), 4);
+  
+  node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
   node = node.freechild();
   node.set_block(new Block(1));
   node.subdivide();
+  node = node.parent();
   
-  for (NodeView view : node.children()) {
-    cout << view.position << ' ' << view.scale << endl;
+  node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
+  node = node.freechild();
+  node.set_block(new Block(2));
+  node = node.parent().parent();
+  
+  for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
+    //cout << view.position << ' ' << view.scale << endl;
     if (view.isfreenode()) {
       cout << "FREE "<< view.position << ' ' << view.scale << endl;
     }
   }
-  
   
   start = getTime();
 	num = 0;
@@ -376,6 +393,8 @@ void SingleTreeGame::setup_gameloop() {
 		num ++;
 	}
   cout << getTime() - start << " Time iter (num blocks): " << num << endl;
+  
+  cout << world.max_depth() << " max_depth" << endl;
   
 	spectator.controller = controls;
 	graphics->set_camera(&spectator.position, &spectator.angle);

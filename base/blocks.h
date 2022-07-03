@@ -221,7 +221,7 @@ public:
 	// it is removed, and the pointer is no longer valid
 	void remove_freechild();
 	// adds a freechild to the current node
-	void add_freechild();
+	void add_freechild(vec3 offset, quat rotation);
 	
 	// these methods read/write/modify the flags set on nodes,
 	// where flag is a bit mask. the flags are defined in the
@@ -234,6 +234,7 @@ public:
 	// a node is changed
 	void on_change();
 	void update_depth();
+	void update_depth(uint8 new_depth);
 	
 	// modify the block that this node holds.
 	void set_block(Block* block);
@@ -326,7 +327,15 @@ public:
 	FreeNodeView freechild() const;
 	FreeNodeView freesibling() const;
 	
+	explicit operator NodeView() const;
+	
+	template <template <typename> typename NodeIterT, typename ... Args>
+	BlockIterable<NodeIterT<FreeNodeView>> iter(Args ... args);
+	BlockIterable<ChildIter<FreeNodeView>> children();
+	
 protected:
+	void recalculate_position();
+	
 	RefCounter<FreeNodeView> highparent;
 	// std::shared_ptr<FreeNodeView> highparent;
 };
@@ -573,6 +582,11 @@ inline FreeNodeView::FreeNodeView() {
 
 template <template <typename> typename NodeIterT, typename ... Args>
 BlockIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
+	return {*this, args...};
+}
+
+template <template <typename> typename NodeIterT, typename ... Args>
+BlockIterable<NodeIterT<FreeNodeView>> FreeNodeView::iter(Args ... args) {
 	return {*this, args...};
 }
 
