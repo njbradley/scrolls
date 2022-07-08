@@ -157,7 +157,7 @@ vector<ivec3> chunksInRenderDistance(vec3 playerPos) {
 
 void SingleGame::loadOrGenerateTerrain(BlockContainer& bc) {
 		if (!filesystem->from_file(bc)) {
-			generator->generate_chunk(bc);
+			generator->generate_chunk(bc, 1);
       filesystem->to_file(bc);
 		}
 }
@@ -299,6 +299,7 @@ void SingleGame::timestep() {
 
 
 const int loading_resolution = worldsize/4;
+int PARAM(min_scale) = 1;
 
 
 SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize/2, -worldsize/2, -worldsize/2), worldsize) {
@@ -325,7 +326,7 @@ void SingleTreeGame::setup_gameloop() {
 	double start = getTime();
   cout << generator->get_height(ivec3(0,0,0)) << " get_height" << endl;
   
-  generator->generate_chunk(world);
+  generator->generate_chunk(world, min_scale);
   
 	cout << getTime() - start << " Time terrain " << endl;
 	start = getTime();
@@ -344,8 +345,8 @@ void SingleTreeGame::setup_gameloop() {
   cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 	
   
-  NodeView node = world.get_global(ivec3(0,0,0), 4);
-  node = node.parent();
+  // NodeView node = world.get_global(ivec3(0,0,0), 4);
+  // node = node.parent();
   
   //for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
   //    cout << view.position << ' ' << view.scale << endl;
@@ -354,26 +355,26 @@ void SingleTreeGame::setup_gameloop() {
   //    }
   //}
   
-  cout << "adding stuff" << endl;
-  node = world.get_global(ivec3(0,0,0), 4);
+  // cout << "adding stuff" << endl;
+  // node = world.get_global(ivec3(0,0,0), 4);
+  //
+  // node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
+  // node = node.freechild();
+  // node.set_block(new Block(1));
+  // node.subdivide();
+  // node = node.parent();
+  //
+  // node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
+  // node = node.freechild();
+  // node.set_block(new Block(2));
+  // node = node.parent().parent();
   
-  node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
-  node = node.freechild();
-  node.set_block(new Block(1));
-  node.subdivide();
-  node = node.parent();
-  
-  node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
-  node = node.freechild();
-  node.set_block(new Block(2));
-  node = node.parent().parent();
-  
-  for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
-    //cout << view.position << ' ' << view.scale << endl;
-    if (view.isfreenode()) {
-      cout << "FREE "<< view.position << ' ' << view.scale << endl;
-    }
-  }
+  // for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
+  //   //cout << view.position << ' ' << view.scale << endl;
+  //   if (view.isfreenode()) {
+  //     cout << "FREE "<< view.position << ' ' << view.scale << endl;
+  //   }
+  // }
   
   start = getTime();
 	num = 0;
@@ -437,7 +438,7 @@ void SingleTreeGame::generate_new_world(NodeView newnode, NodeView oldroot, bool
   } else {
     if (generate) {
       // cout << "generating " << newnode.position << ' ' << newnode.scale << endl;
-      generator->generate_chunk(newnode);
+      generator->generate_chunk(newnode, min_scale);
     }
   }
 }

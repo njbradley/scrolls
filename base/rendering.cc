@@ -20,6 +20,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	bool changed = false;
 	
 	// for (BlockView block : BlockIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
+	// for (NodeView& node : mainblock.iter<FlagNodeIter>(Block::RENDER_FLAG)) {
 	for (FreeNodeView& node : FreeNodeView(mainblock).iter<FlagNodeIter>(Block::RENDER_FLAG)) {
 		node.reset_flag(Block::RENDER_FLAG);
 		if (!node.hasblock()) continue;
@@ -53,7 +54,8 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 							visible = true;
 						}
 					}
-				} else if (node.isfreenode()) {
+				}
+				else if (node.isfreenode()) {
 					data.facedata.faces[dir].texture = block->value;
 					visible = true;
 				}

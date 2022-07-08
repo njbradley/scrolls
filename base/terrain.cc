@@ -255,6 +255,13 @@ TerrainValue TerrainValue::operator/(float val) const {
 	return TerrainValue(value / val, deriv / val);
 }
 
+bool TerrainValue::operator<(const TerrainValue& other) const {
+	return value < other.value;
+}
+bool TerrainValue::operator>(const TerrainValue& other) const {
+	return value > other.value;
+}
+
 TerrainValue TerrainValue::lerp(const TerrainValue& val1, const TerrainValue& val2, float amount) {
 	return TerrainValue(val1.value * (1-amount) + val2.value * amount, val1.deriv * (1-amount) + val2.deriv * amount);
 }
@@ -265,12 +272,22 @@ ShapeValue::ShapeValue(const TerrainValue& terrvalue, Blocktype block): TerrainV
 	
 }
 
+bool ShapeValue::operator<(const ShapeValue& other) const {
+	return value < other.value;
+}
+bool ShapeValue::operator>(const ShapeValue& other) const {
+	return value > other.value;
+}
+
 Blocktype ShapeValue::blocktype(int scale) {
-	if (std::abs(value) > (scale-1) * 1.73f * deriv) {
-		// cout << " val " << value << ' ' << scale << ' ' << deriv << ' ' << (scale-1) * 1.73f * deriv << endl;
-		return value >= 0 ? btype : BLOCK_NULL;
+	if (needs_split(scale)) {
+		return BLOCK_SPLIT;
 	}
-	return BLOCK_SPLIT;
+	return value >= 0 ? btype : BLOCK_NULL;
+}
+
+bool ShapeValue::needs_split(int scale) {
+	return std::abs(value) < (scale-1) * 1.73f * deriv;
 }
 
 
@@ -321,7 +338,7 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 
 template <typename Layers, ShapeFunc ... Shapes>
-void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
+void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node, int min_scale) {
 	
 	// float max_deriv = 0;
 	// for (int i = 0; i < 100000000; i ++) {
@@ -335,27 +352,75 @@ void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node) {
 	// 	}
 	// }
 	// cout << max_deriv << " DERIV" << endl;
+	int scale = node.scale;
+	int depth = 0;
+	while (scale > min_scale) {
+		depth ++;
+		scale /= BDIMS;
+	}
 	
 	double start = getTime();
 	ShapeFunc shapes[] = {Shapes...};
-	gen_node(node, shapes, sizeof...(Shapes));
+	gen_node(node, shapes, sizeof...(Shapes), depth);
 	double time = getTime() - start;
 	// cout << "generated " << node.position << " in " << time << endl;
 }
 
 template <typename Layers, ShapeFunc ... Shapes>
-Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes) {
+Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth) {
+	node.reset_flag(Block::GENERATION_FLAG);
+	
+	if (node.haschildren()) {
+		if (max_depth <= 0) {
+			return 0;
+		}
+		Blocktype blocktype = gen_node(node.child(0), shapes, num_shapes, max_depth-1);
+		for (int i = 1; i < BDIMS3; i ++) {
+			if (node.child(i).test_flag(Block::GENERATION_FLAG)) {
+				Blocktype newblock = gen_node(node.child(i), shapes, num_shapes, max_depth-1);
+				blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
+			}
+		}
+		return blocktype;
+	}
+	
 	vec3 pos = vec3(node.position) + float(node.scale)/2;
 	
 	Blocktype blocktype;
 	ShapeContext context (seed, pos, layers.layers, layers.size);
+	ShapeValue value;
 	int index;
 	for (index = 0; index < num_shapes; index ++) {
-		ShapeValue value = shapes[index](&context, pos);
+		value = shapes[index](&context, pos);
 		blocktype = value.blocktype(node.scale);
-		// cout << "NEW blocktype " << blocktype << endl;
+		
 		if (blocktype != BLOCK_NULL) {
 			break;
+		}
+	}
+	
+	if (blocktype == BLOCK_SPLIT) {
+		if (max_depth > 0) {
+			node.split();
+			blocktype = gen_node(node.child(0), shapes + index, num_shapes - index, max_depth-1);
+			for (int i = 1; i < BDIMS3; i ++) {
+				Blocktype newblock = gen_node(node.child(i), shapes + index, num_shapes - index, max_depth-1);
+				blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
+			}
+			if (blocktype == BLOCK_SPLIT) {
+				return BLOCK_SPLIT;
+			}
+			node.join();
+		} else {
+			for (index = 0; index < num_shapes; index ++) {
+				ShapeValue newvalue = shapes[index](&context, pos);
+				if (newvalue > value) {
+					value = newvalue;
+				}
+			}
+			
+			blocktype = value.blocktype(0);
+			node.set_flag(Block::GENERATION_FLAG);
 		}
 	}
 	
@@ -363,19 +428,7 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 		blocktype = 0;
 	}
 	
-	if (blocktype == BLOCK_SPLIT) {
-		node.split();
-		blocktype = gen_node(node.child(0), shapes + index, num_shapes - index);
-		for (int i = 1; i < BDIMS3; i ++) {
-			Blocktype newblock = gen_node(node.child(i), shapes, num_shapes);
-			blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
-		}
-		if (blocktype == BLOCK_SPLIT) {
-			return BLOCK_SPLIT;
-		}
-		node.join();
-	}
-	
+	// cout << "blocktype: " << blocktype << endl;
 	node.set_block(new Block(blocktype));
 	return blocktype;
 }

@@ -95,6 +95,7 @@ struct Node {
 	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
 	uint8 max_depth = 0;
+	uint8 last_pix = 255;
 };
 
 struct FreeNode : Node {

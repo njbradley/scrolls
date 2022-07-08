@@ -59,8 +59,8 @@ float perlin2d(int seed, float x, float y);
 
 
 struct TerrainValue {
-	float value;
-	float deriv;
+	float value = 0;
+	float deriv = 0;
 	
 	TerrainValue();
 	TerrainValue(float value, float deriv);
@@ -75,6 +75,9 @@ struct TerrainValue {
 	TerrainValue operator*(float val) const;
 	TerrainValue operator/(float val) const;
 	
+	bool operator<(const TerrainValue& other) const;
+	bool operator>(const TerrainValue& other) const;
+	
 	static TerrainValue lerp(const TerrainValue& val1, const TerrainValue& val2, float amount);
 };
 
@@ -83,9 +86,14 @@ struct ShapeValue : protected TerrainValue {
 	using TerrainValue::deriv;
 	Blocktype btype;
 	
+	ShapeValue() {}
 	ShapeValue(const TerrainValue& terrvalue, Blocktype btype);
 	
+	bool operator<(const ShapeValue& other) const;
+	bool operator>(const ShapeValue& other) const;
+	
 	Blocktype blocktype(int scale);
+	bool needs_split(int scale);
 };
 
 struct TerrainContext {
@@ -120,7 +128,7 @@ public:
 	TerrainGenerator(int seed);
 	virtual ~TerrainGenerator() {}
 	
-	virtual void generate_chunk(NodeView node) = 0;
+	virtual void generate_chunk(NodeView node, int min_scale) = 0;
 	virtual int get_height(ivec3 pos) = 0;
 };
 
@@ -164,8 +172,8 @@ struct ShapeResolver : public TerrainGenerator {
 	using TerrainGenerator::TerrainGenerator;
 	Layers layers;
 	
-	virtual void generate_chunk(NodeView node);
-	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes);
+	virtual void generate_chunk(NodeView node, int min_scale);
+	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth);
 	
 	virtual int get_height(ivec3 pos);
 };
