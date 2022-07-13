@@ -338,7 +338,7 @@ TerrainDecorator::TerrainDecorator(int newseed): seed(newseed) {
 
 
 template <typename Layers, ShapeFunc ... Shapes>
-void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node, int min_scale) {
+void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node, int depth) {
 	
 	// float max_deriv = 0;
 	// for (int i = 0; i < 100000000; i ++) {
@@ -352,12 +352,13 @@ void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node, int min_scal
 	// 	}
 	// }
 	// cout << max_deriv << " DERIV" << endl;
-	int scale = node.scale;
-	int depth = 0;
-	while (scale > min_scale) {
-		depth ++;
-		scale /= BDIMS;
-	}
+	
+	// int scale = node.scale;
+	// int depth = 0;
+	// while (scale > min_scale) {
+	// 	depth ++;
+	// 	scale /= BDIMS;
+	// }
 	
 	double start = getTime();
 	ShapeFunc shapes[] = {Shapes...};
@@ -400,6 +401,18 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 	}
 	
 	if (blocktype == BLOCK_SPLIT) {
+		// cout << "split " << endl;
+		for (int i = index; i < num_shapes; i ++) {
+			ShapeValue newvalue = shapes[i](&context, pos);
+			if (newvalue.blocktype(node.scale) != BLOCK_SPLIT and newvalue.blocktype(node.scale) != BLOCK_NULL) {
+				value = newvalue;
+				break;
+			}
+			if (newvalue > value) {
+				value = newvalue;
+			}
+		}
+		
 		if (max_depth > 0) {
 			node.split();
 			blocktype = gen_node(node.child(0), shapes + index, num_shapes - index, max_depth-1);
@@ -408,17 +421,14 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 				blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
 			}
 			if (blocktype == BLOCK_SPLIT) {
+				// cout << " actual " << endl;
+				blocktype = value.blocktype(0);
+				node.set_last_pix(blocktype);
 				return BLOCK_SPLIT;
 			}
+			// cout << " join" << endl;
 			node.join();
 		} else {
-			for (index = 0; index < num_shapes; index ++) {
-				ShapeValue newvalue = shapes[index](&context, pos);
-				if (newvalue > value) {
-					value = newvalue;
-				}
-			}
-			
 			blocktype = value.blocktype(0);
 			node.set_flag(Block::GENERATION_FLAG);
 		}

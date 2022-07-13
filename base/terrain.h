@@ -128,7 +128,7 @@ public:
 	TerrainGenerator(int seed);
 	virtual ~TerrainGenerator() {}
 	
-	virtual void generate_chunk(NodeView node, int min_scale) = 0;
+	virtual void generate_chunk(NodeView node, int depth) = 0;
 	virtual int get_height(ivec3 pos) = 0;
 };
 
@@ -172,7 +172,7 @@ struct ShapeResolver : public TerrainGenerator {
 	using TerrainGenerator::TerrainGenerator;
 	Layers layers;
 	
-	virtual void generate_chunk(NodeView node, int min_scale);
+	virtual void generate_chunk(NodeView node, int depth);
 	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth);
 	
 	virtual int get_height(ivec3 pos);

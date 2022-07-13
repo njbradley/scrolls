@@ -44,6 +44,25 @@ NodePtr NodePtr::freesibling() const {
 	return NodePtr();
 }
 
+void NodePtr::set_last_pix(int blockval) {
+	for (int i = 0; i < BDIMS3; i ++) {
+		NodePtr child_last_pix = child(i).last_pix();
+		if (child_last_pix.isvalid() and child_last_pix.block()->value == blockval) {
+			node->last_pix = i;
+			return;
+		}
+	}
+}
+
+NodePtr NodePtr::last_pix() const {
+	if (hasblock()) {
+		return *this;
+	} else if (haschildren()) {
+		return child(node->last_pix).last_pix();
+	}
+	return NodePtr();
+}
+
 void NodePtr::join() {
 	del_tree(node);
 	node->flags &= ~Block::CHILDREN_FLAG;
@@ -109,6 +128,13 @@ void NodePtr::set_flag(uint32 flag) {
 
 void NodePtr::reset_flag(uint32 flag) {
 	node->flags &= ~flag;
+}
+
+void NodePtr::set_all_flags(uint32 flag) {
+	set_flag(flag);
+	for (NodePtr node : iter<NodeIter>()) {
+		node.node->flags |= flag;
+	}
 }
 
 void NodePtr::set_block(Block* block) {
@@ -314,6 +340,14 @@ NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 		result = result.child(rem);
   }
 	return result;
+}
+
+int NodeView::min_scale() const {
+	int cur_scale = scale;
+	for (int i = 0; i < node->max_depth; i ++) {
+		cur_scale /= BDIMS;
+	}
+	return cur_scale;
 }
 
 BlockIterable<ChildIter<NodeView>> NodeView::children() {

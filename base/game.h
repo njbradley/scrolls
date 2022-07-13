@@ -75,6 +75,10 @@ public:
 	SingleTreeGame();
 	virtual ~SingleTreeGame();
 	
+	void join_chunk(NodeView node, int depth);
+	void update_chunk(NodeView root, int depth);
+	void generate_first_world(NodeView* nodearr);
+	void generate_first_world_recurse(NodeView node);
 	void generate_new_world(NodeView newnode, NodeView oldroot, bool generate, bool copy);
 	void check_loading();
 	void relocate_world(ivec3 newpos);
@@ -85,6 +89,8 @@ protected:
 	Renderer* renderer;
 	TerrainGenerator* generator;
 	Pool* threadpool;
+	int fixed_depth = 0;
+	ivec3 detail_center = ivec3(0,0,0);
 	
 	std::mutex generation_lock;
 	std::mutex world_lock;

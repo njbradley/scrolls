@@ -95,7 +95,7 @@ struct Node {
 	FreeNode* freechild = nullptr;
 	uint32 flags = 0;
 	uint8 max_depth = 0;
-	uint8 last_pix = 255;
+	uint8 last_pix = 0;
 };
 
 struct FreeNode : Node {
@@ -210,6 +210,9 @@ public:
 	NodePtr freechild() const;
 	NodePtr freesibling() const;
 	
+	void set_last_pix(int blockval);
+	NodePtr last_pix() const;
+	
 	// turns a leaf node into an inner node, and
 	// creates 8 child nodes
 	void split();
@@ -230,6 +233,7 @@ public:
 	uint32 test_flag(uint32 flag) const;
 	void set_flag(uint32 flag);
 	void reset_flag(uint32 flag);
+	void set_all_flags(uint32 flag);
 	
 	// this method should be called whenever the structure or value of
 	// a node is changed
@@ -303,6 +307,7 @@ public:
 	// this means passing 1 as scale guarantees you will recieve a leaf node
 	NodeView get_global(ivec3 pos, int scale);
 	
+	int min_scale() const;
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
 	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);

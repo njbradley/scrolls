@@ -9,7 +9,7 @@ class Renderer {
 public:
 	virtual ~Renderer() {}
 	
-	virtual void derender(NodeView nv, RenderBuf* renderbuf) = 0;
+	virtual void derender(NodePtr nv, RenderBuf* renderbuf) = 0;
 
 	virtual bool render(NodeView block, RenderBuf* renderbuf) = 0;
 };
@@ -20,7 +20,7 @@ class DefaultRenderer : public Renderer {
 public:
 	virtual bool render(NodeView block, RenderBuf* renderbuf);
 
-	virtual void derender(NodeView nv, RenderBuf* renderbuf);
+	virtual void derender(NodePtr nv, RenderBuf* renderbuf);
 	
 };
 

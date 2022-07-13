@@ -7,12 +7,12 @@ DEFINE_PLUGIN(Renderer);
 
 EXPORT_PLUGIN(DefaultRenderer);
 
-void DefaultRenderer::derender(NodeView nv, RenderBuf* renderbuf) {
-	for (BlockView block : BlockIterable<BlockIter<NodeView>>(nv)) {
-		if (block->renderindex != -1) {
-			renderbuf->del(block->renderindex);
+void DefaultRenderer::derender(NodePtr nv, RenderBuf* renderbuf) {
+	for (NodePtr block : BlockIterable<BlockIter<NodePtr>>(nv)) {
+		if (block.block()->renderindex != -1) {
+			renderbuf->del(block.block()->renderindex);
 		}
-		block->renderindex = -1;
+		block.block()->renderindex = -1;
 	}
 }
 

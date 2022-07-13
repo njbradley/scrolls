@@ -300,6 +300,7 @@ void SingleGame::timestep() {
 
 const int loading_resolution = worldsize/4;
 int PARAM(min_scale) = 1;
+int PARAM(detail_resolution) = 256;
 
 
 SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize/2, -worldsize/2, -worldsize/2), worldsize) {
@@ -326,7 +327,24 @@ void SingleTreeGame::setup_gameloop() {
 	double start = getTime();
   cout << generator->get_height(ivec3(0,0,0)) << " get_height" << endl;
   
-  generator->generate_chunk(world, min_scale);
+  int scale = detail_resolution;
+  fixed_depth = 0;
+  while (scale > 1) {
+    scale /= BDIMS;
+    fixed_depth ++;
+  }
+  cout << "detail_resolution " << detail_resolution << ' ' << fixed_depth << endl;
+  
+  generator->generate_chunk(world, fixed_depth);
+  world.split();
+  // NodeView nodearr[8];
+  for (int i = 0; i < BDIMS3; i ++) {
+    world.child(i).set_flag(Block::GENERATION_FLAG);
+    generate_first_world_recurse(world.child(i));
+    // generate_first_world_recurse(world.child(i), (1-ivec3(NodeIndex(i))+2)%2);
+    // nodearr[i] = world.child(i);
+  }
+  // generate_first_world(nodearr);
   
 	cout << getTime() - start << " Time terrain " << endl;
 	start = getTime();
@@ -334,7 +352,7 @@ void SingleTreeGame::setup_gameloop() {
 	renderer->render(world, graphics->blockbuf);
   
 	cout << getTime() - start << " Time render " << endl;
-	
+  
   start = getTime();
 	int num = 0;
   
@@ -401,6 +419,93 @@ void SingleTreeGame::setup_gameloop() {
 	graphics->set_camera(&spectator.position, &spectator.angle);
 }
 
+void SingleTreeGame::join_chunk(NodeView node, int depth) {
+  if (node.max_depth() > depth) {
+    if (depth > 0) {
+      for (int i = 0; i < BDIMS3; i ++) {
+        join_chunk(node.child(i), depth-1);
+      }
+    } else {
+      NodePtr last_pix = node.last_pix();
+      Block* block = new Block(*last_pix.block());
+      renderer->derender(node, graphics->blockbuf);
+      node.join();
+      node.set_block(block);
+      node.set_flag(Block::GENERATION_FLAG);
+    }
+  }
+}
+      
+
+void SingleTreeGame::update_chunk(NodeView node, int depth) {
+  // cout << node.position << ' ' << node.scale << endl;
+  if (depth > node.max_depth() and node.test_flag(Block::GENERATION_FLAG)) {
+    // cout << "generating " << depth << ' ' << node.max_depth() << ' ' << node.hasblock() << ' ' << node.test_flag(Block::GENERATION_FLAG) << endl;
+    for (NodePtr delnode : NodePtr(node).iter<FlagBlockIter>(Block::GENERATION_FLAG)) {
+      renderer->derender(delnode, graphics->blockbuf);
+    }
+    generator->generate_chunk(node, depth);
+    // cout << " " << depth << ' ' << node.max_depth() << ' ' << node.hasblock() << ' ' << node.test_flag(Block::GENERATION_FLAG) << endl;
+  }
+  if (depth < node.max_depth()) {
+    // cout << "joining " << endl;
+    join_chunk(node, depth);
+  }
+}
+
+void SingleTreeGame::generate_first_world_recurse(NodeView node) {
+  if (node.scale > detail_resolution) {
+    if (!node.haschildren()) {
+      node.split();
+      node.set_all_flags(Block::GENERATION_FLAG);
+    }
+    ivec3 playerpos = safefloor((spectator.position - vec3(node.position)) / float(node.scale/BDIMS));
+    NodeIndex index = glm::max(ivec3(0,0,0), glm::min(ivec3(BDIMS-1), playerpos));
+    for (int i = 0; i < BDIMS3; i ++) {
+      if (i != index) {
+        update_chunk(node.child(i), fixed_depth-1);
+      }
+    }
+    generate_first_world_recurse(node.child(index));
+  } else {
+    update_chunk(node, fixed_depth);
+  }
+  // if (node.test_flag(Block::GENERATION_FLAG)) {
+  //   if (node.max_depth() < fixed_depth) {
+  //     generator->generate_chunk(node, fixed_depth);
+  //   }
+  // }
+  // if (node.scale > detail_resolution and node.haschildren()) {
+  //   generate_first_world_recurse(node.child(index), index);
+  // }
+}
+
+void SingleTreeGame::generate_first_world(NodeView* nodearr) {
+  if (nodearr[0].scale > detail_resolution) {
+    NodeView newarr[8];
+    for (int i = 0; i < BDIMS3; i ++) {
+      nodearr[i].split();
+      ivec3 pos = NodeIndex(i);
+      newarr[i] = nodearr[i].child((1-pos+2)%2);
+    }
+    generate_first_world(newarr);
+    for (int i = 0; i < BDIMS3; i ++) {
+      for (int j = 0; j < BDIMS3; j ++) {
+        NodeView child = nodearr[i].child(j);
+        if (!child.haschildren()) {
+          update_chunk(child, fixed_depth);
+        }
+      }
+    }
+  } else {
+    for (int i = 0; i < BDIMS3; i ++) {
+      // cout << "base" << endl;
+      update_chunk(nodearr[i], fixed_depth);
+    }
+  }
+}
+          
+
 void SingleTreeGame::generate_new_world(NodeView newnode, NodeView oldroot, bool generate, bool copy) {
   // cout << newnode.position << ' ' << oldroot.position << ' ' <<(newnode.position - oldroot.position) % newnode.scale  << endl;
   if ((newnode.position - oldroot.position) % newnode.scale != ivec3(0,0,0)) {
@@ -446,6 +551,19 @@ void SingleTreeGame::generate_new_world(NodeView newnode, NodeView oldroot, bool
 void SingleTreeGame::check_loading() {
   if (generation_lock.try_lock()) {
     std::unique_lock guard(generation_lock, std::adopt_lock);
+    // IHitCube detailgoalbox (detail_center - detail_resolution*3/4, detail_resolution*3/2);
+    // if (!detailgoalbox.contains(ivec3(spectator.position))) {
+    //   ivec3 localpos = ivec3(spectator.position) - detail_center;
+    //   ivec3 rolldir = glm::sign(localpos * 2 / detail_resolution);
+    //   detail_center += rolldir * detail_resolution;
+      // threadpool->pushJob([this] () {
+        for (int i = 0; i < BDIMS3; i ++) {
+          generate_first_world_recurse(world.child(i));
+        }
+        renderer->render(world, graphics->blockbuf);
+      // });
+    // }
+    return;
     IHitCube goalbox (world.midpoint() - loading_resolution*3/4, loading_resolution*3/2);
     if (!goalbox.contains(ivec3(spectator.position))) {
       ivec3 localpos = ivec3(spectator.position) - goalbox.midpoint();
@@ -486,7 +604,7 @@ void SingleTreeGame::timestep() {
 	double cur_time = getTime();
 	double deltatime = cur_time - last_time;
 	last_time = cur_time;
-	check_loading();
+	// check_loading();
   std::stringstream debugstr;
   debugstr << "FPS: " << 1 / deltatime << endl;
   debugstr << "spectatorpos: " << spectator.position << endl;
