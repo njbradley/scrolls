@@ -8,7 +8,6 @@
 
 
 
-
 NodePtr NodePtr::child(NodeIndex index) const {
 	if (haschildren()) {
 		return NodePtr(node->children + index);
