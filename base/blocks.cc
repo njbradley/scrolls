@@ -43,10 +43,10 @@ NodePtr NodePtr::freesibling() const {
 	return NodePtr();
 }
 
-void NodePtr::set_last_pix(int blockval) {
+void NodePtr::set_last_pix(BlockData* blockval) {
 	for (int i = 0; i < BDIMS3; i ++) {
 		NodePtr child_last_pix = child(i).last_pix();
-		if (child_last_pix.isvalid() and child_last_pix.block()->value == blockval) {
+		if (child_last_pix.isvalid() and child_last_pix.block()->type == blockval) {
 			node->last_pix = i;
 			return;
 		}

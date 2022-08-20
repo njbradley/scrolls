@@ -2,6 +2,7 @@
 
 #include "blocks.h"
 #include "blockiter.h"
+#include "blockdata.h"
 
 #include <sstream>
 #include <fstream>
@@ -45,6 +46,13 @@ DEFINE_PLUGIN(BlockFileFormat);
 EXPORT_PLUGIN(SequentialFileFormat);
 
 void SequentialFileFormat::from_file(NodePtr node, istream& ifile) {
+	vector<BlockData*> blockarr;
+	for (BlockData* data : BlockData::allblocks) {
+		if (data->id > blockarr.size()) {
+			blockarr.resize(data->id, nullptr);
+		}
+		blockarr[data->id-1] = data;
+	}
 	for (NodePtr curnode : node.iter<NodeIter>()) {
 		if (ifile.peek() == '{') {
 			ifile.get();
@@ -53,7 +61,8 @@ void SequentialFileFormat::from_file(NodePtr node, istream& ifile) {
 			ifile.get();
 			curnode.set_block(nullptr);
 		} else {
-			curnode.set_block(new Block(ifile.get()));
+			int index = ifile.get();
+			curnode.set_block(new Block(index == 0 ? nullptr : blockarr[index-1]));
 		}
 	}
 }
@@ -63,7 +72,7 @@ void SequentialFileFormat::to_file(NodePtr node, ostream& ofile) {
 		if (curnode.haschildren()) {
 			ofile.put('{');
 		} else if (curnode.hasblock()) {
-			ofile.put(curnode.block()->value);
+			ofile.put(curnode.block()->type->id);
 		} else {
 			ofile.put('~');
 		}

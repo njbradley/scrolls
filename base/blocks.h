@@ -57,11 +57,12 @@ only 4 children, but real nodes are 3d and have 8 children
 When manipulating nodes in the tree, you will rarely interact
 with raw Node* pointers, instead use the NodePtr and similar
 classes, which wrap a Node* pointer with helpful functions and
-bookeeping of size and position
+bookeeping of size and position, as well as keeping track of
+resources
 */
 	
 struct Block {
-	int value = 0;
+	BlockData* type = nullptr;
 	int renderindex = -1;
 	uint8 sunlight = 0;
 	uint8 blocklight = 0;
@@ -78,7 +79,7 @@ struct Block {
 	};
 	
 	Block();
-	Block(int value);
+	Block(BlockData* newtype);
 	Block(const Block& other);
 };
 
@@ -210,7 +211,7 @@ public:
 	NodePtr freechild() const;
 	NodePtr freesibling() const;
 	
-	void set_last_pix(int blockval);
+	void set_last_pix(BlockData* blockval);
 	NodePtr last_pix() const;
 	
 	// turns a leaf node into an inner node, and
@@ -408,11 +409,11 @@ inline Block::Block() {
 	
 }
 
-inline Block::Block(int nvalue): value(nvalue) {
+inline Block::Block(BlockData* newtype): type(newtype) {
 	
 }
 
-inline Block::Block(const Block& other): value(other.value) {
+inline Block::Block(const Block& other): type(other.type) {
 	
 }
 

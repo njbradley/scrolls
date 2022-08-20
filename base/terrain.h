@@ -26,10 +26,9 @@ Terrain decoration: Finally, the terrain is decorated, with objects
 
 
 
-using Blocktype = int;
 
-const Blocktype BLOCK_NULL = -1;
-const Blocktype BLOCK_SPLIT = -2;
+BlockData* const BLOCK_NULL = (BlockData*)(-1);
+BlockData* const BLOCK_SPLIT = (BlockData*)(-2);
 
 using rand_gen = std::mt19937;
 using int_dist = std::uniform_int_distribution<int>;
@@ -84,15 +83,15 @@ struct TerrainValue {
 struct ShapeValue : protected TerrainValue {
 	using TerrainValue::value;
 	using TerrainValue::deriv;
-	Blocktype btype;
+	BlockData* btype;
 	
 	ShapeValue() {}
-	ShapeValue(const TerrainValue& terrvalue, Blocktype btype);
+	ShapeValue(const TerrainValue& terrvalue, BlockData* btype);
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;
 	
-	Blocktype blocktype(int scale);
+	BlockData* blocktype(int scale);
 	bool needs_split(int scale);
 };
 
@@ -157,7 +156,7 @@ public:
 // 	static float max_deriv();
 //
 //	The block type of the shape
-// 	static Blocktype block_val();
+// 	static BlockData* block_val();
 // };
 
 template <LayerFunc ... Layers>
@@ -173,7 +172,7 @@ struct ShapeResolver : public TerrainGenerator {
 	Layers layers;
 	
 	virtual void generate_chunk(NodeView node, int depth);
-	Blocktype gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth);
+	BlockData* gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth);
 	
 	virtual int get_height(ivec3 pos);
 };
@@ -191,16 +190,16 @@ struct ShapeResolver : public TerrainGenerator {
 // 	ShapeContext get_context(vec3 pos);
 //
 // 	template <typename Shape>
-// 	Blocktype gen_func(ShapeContext* ctx, ivec3 pos, int scale);
+// 	BlockData* gen_func(ShapeContext* ctx, ivec3 pos, int scale);
 //
 // 	template <typename FirstShape, typename SecondShape, typename ... OtherShapes>
-// 	Blocktype gen_block(NodeView node, ShapeContext* ctx);
+// 	BlockData* gen_block(NodeView node, ShapeContext* ctx);
 // 	template <typename Shape>
-// 	Blocktype gen_block(NodeView node, ShapeContext* ctx);
+// 	BlockData* gen_block(NodeView node, ShapeContext* ctx);
 // 	template <typename ... OtherShapes>
-// 	Blocktype gen_block(NodeView node);
+// 	BlockData* gen_block(NodeView node);
 // 	template <typename ... CurShapes>
-// 	Blocktype gen_block(NodeView node, Blocktype mytype);
+// 	BlockData* gen_block(NodeView node, BlockData* mytype);
 //
 // 	virtual void generate_chunk(NodeView node);
 // 	virtual int get_height(ivec3 pos);

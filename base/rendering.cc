@@ -2,6 +2,7 @@
 #include "blocks.h"
 #include "blockiter.h"
 #include "graphics.h"
+#include "blockdata.h"
 
 DEFINE_PLUGIN(Renderer);
 
@@ -26,7 +27,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 		if (!node.hasblock()) continue;
 		BlockView block = NodeView(node);
 		// continue;
-		if (block->value != 0) {
+		if (block->type != nullptr) {
 			RenderData data;
 			bool visible = false;
 			
@@ -44,8 +45,8 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 				if (sidenode.isvalid()) {
 					for (BlockView sideblock : BlockIterable<DirBlockIter<NodeView>>(sidenode, -ivec3(dir))) {
 						// cout << "    SIDEBLOCK " << sideblock.position << ' ' << sideblock.scale << endl;
-						if (sideblock->value == 0) {
-							data.facedata.faces[dir].texture = block->value;
+						if (sideblock->type == nullptr) {
+							data.facedata.faces[dir].texture = block->type->textures[dir] + 1;
 							data.facedata.faces[dir].sunlight = 0x0f;
 							data.facedata.faces[dir].blocklight = 0x00;
 							data.facedata.faces[dir].other = 0;
@@ -56,7 +57,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 					}
 				}
 				else if (node.isfreenode()) {
-					data.facedata.faces[dir].texture = block->value;
+					data.facedata.faces[dir].texture = block->type->textures[dir] + 1;
 					visible = true;
 				}
 					

@@ -66,11 +66,14 @@ public:
 	ViewBox* viewbox;
 	
 	void set_camera(vec3* newpos, vec2* newrot);
+    // returnes the texture id of the path (or -1 if it doesn't exist)
+    int get_texture_id(string path);
 	
 	virtual void swap() = 0;
 protected:
 	vec3* camera_pos;
 	vec2* camera_rot;
+    vector<string> block_texture_paths;
 };
 
 #endif

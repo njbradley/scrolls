@@ -196,12 +196,11 @@ void GLGraphics::init_graphics() {
 }
 
 void GLGraphics::load_textures() {
-  vector<string> paths;
   for (std::filesystem::path path : std::filesystem::directory_iterator(pluginloader()->find_path("textures/blocks/"))) {
-    paths.push_back(path.string());
+    block_texture_paths.push_back(path.string());
   }
   
-  block_textures = load_array(paths, 8);
+  block_textures = load_array(block_texture_paths, 8);
 }
 
 void GLGraphics::block_draw_call() {

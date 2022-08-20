@@ -1,5 +1,6 @@
 #include "terrain.h"
 #include "blocks.h"
+#include "blockdata.h"
 
 #include <sstream>
 #include <algorithm>
@@ -268,7 +269,7 @@ TerrainValue TerrainValue::lerp(const TerrainValue& val1, const TerrainValue& va
 
 
 
-ShapeValue::ShapeValue(const TerrainValue& terrvalue, Blocktype block): TerrainValue(terrvalue), btype(block) {
+ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block): TerrainValue(terrvalue), btype(block) {
 	
 }
 
@@ -279,7 +280,7 @@ bool ShapeValue::operator>(const ShapeValue& other) const {
 	return value > other.value;
 }
 
-Blocktype ShapeValue::blocktype(int scale) {
+BlockData* ShapeValue::blocktype(int scale) {
 	if (needs_split(scale)) {
 		return BLOCK_SPLIT;
 	}
@@ -368,17 +369,17 @@ void ShapeResolver<Layers,Shapes...>::generate_chunk(NodeView node, int depth) {
 }
 
 template <typename Layers, ShapeFunc ... Shapes>
-Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth) {
+BlockData* ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* shapes, int num_shapes, int max_depth) {
 	node.reset_flag(Block::GENERATION_FLAG);
 	
 	if (node.haschildren()) {
 		if (max_depth <= 0) {
 			return 0;
 		}
-		Blocktype blocktype = gen_node(node.child(0), shapes, num_shapes, max_depth-1);
+		BlockData* blocktype = gen_node(node.child(0), shapes, num_shapes, max_depth-1);
 		for (int i = 1; i < BDIMS3; i ++) {
 			if (node.child(i).test_flag(Block::GENERATION_FLAG)) {
-				Blocktype newblock = gen_node(node.child(i), shapes, num_shapes, max_depth-1);
+				BlockData* newblock = gen_node(node.child(i), shapes, num_shapes, max_depth-1);
 				blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
 			}
 		}
@@ -387,7 +388,7 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 	
 	vec3 pos = vec3(node.position) + float(node.scale)/2;
 	
-	Blocktype blocktype;
+	BlockData* blocktype;
 	ShapeContext context (seed, pos, layers.layers, layers.size);
 	ShapeValue value;
 	int index;
@@ -417,7 +418,7 @@ Blocktype ShapeResolver<Layers,Shapes...>::gen_node(NodeView node, ShapeFunc* sh
 			node.split();
 			blocktype = gen_node(node.child(0), shapes + index, num_shapes - index, max_depth-1);
 			for (int i = 1; i < BDIMS3; i ++) {
-				Blocktype newblock = gen_node(node.child(i), shapes + index, num_shapes - index, max_depth-1);
+				BlockData* newblock = gen_node(node.child(i), shapes + index, num_shapes - index, max_depth-1);
 				blocktype = blocktype != newblock ? BLOCK_SPLIT : blocktype;
 			}
 			if (blocktype == BLOCK_SPLIT) {
@@ -468,14 +469,14 @@ int ShapeResolver<Layers,Shapes...>::get_height(ivec3 ipos) {
 
 using UndefShapeFunc = TerrainValue (*) (ShapeContext* ctx, vec3 pos);
 
-template <Blocktype btype, LayerFunc func>
+template <BlockData& btype, LayerFunc func>
 ShapeValue set_blocktype(ShapeContext* ctx, vec3 pos) {
-	return ShapeValue(func(ctx, pos), btype);
+	return ShapeValue(func(ctx, pos), &btype);
 }
 
-template <Blocktype btype, UndefShapeFunc func>
+template <BlockData& btype, UndefShapeFunc func>
 ShapeValue set_blocktype(ShapeContext* ctx, vec3 pos) {
-	return ShapeValue(func(ctx, pos), btype);
+	return ShapeValue(func(ctx, pos), &btype);
 }
 
 
@@ -555,14 +556,14 @@ TerrainValue shifted_land_level(TerrainContext* ctx, vec3 pos) {
 ShapeValue grass_level(ShapeContext* ctx, vec3 pos) {
 	return ShapeValue(
 		ctx->layer(1) - 4,
-		2
+		&blocktypes::grass
 	);
 }
 
 ShapeValue dirt_level(ShapeContext* ctx, vec3 pos) {
 	return ShapeValue(
 		(ctx->layer(0) + ctx->layer(1)) / 2 - 2,
-		1
+		&blocktypes::dirt
 	);
 }
 
@@ -571,7 +572,7 @@ EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
 	LayerResolver<land_level, shifted_land_level<5>>,
 	// LayerResolver<flat_terrain<16>>,
 	// LayerResolver<sloped_terrain<16,1,3>>,
-	set_blocktype<3,layer_ref<0>>,
+	set_blocktype<blocktypes::stone,layer_ref<0>>,
 	// set_blocktype<1,layer_ref<1>>,
 	// set_blocktype<2,layer_ref<2>>
 	dirt_level,

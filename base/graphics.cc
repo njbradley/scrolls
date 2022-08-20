@@ -1,5 +1,7 @@
 #include "graphics.h"
 
+#include <algorithm>
+
 DEFINE_PLUGIN(RenderBuf);
 
 DEFINE_PLUGIN(GraphicsContext);
@@ -35,4 +37,17 @@ GraphicsContext::~GraphicsContext() {
 void GraphicsContext::set_camera(vec3* newpos, vec2* newrot) {
 	camera_pos = newpos;
 	camera_rot = newrot;
+}
+
+int GraphicsContext::get_texture_id(string path) {
+	cout << "path " << path << endl;
+	int i = 0;
+	for (string curpath : block_texture_paths) {
+		if (curpath == path or (curpath.length() > path.length() and curpath.substr(curpath.length()-path.length()) == path)) {
+			cout << i << endl;
+			return i;
+		}
+		i ++;
+	}
+	return -1;
 }

@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "physics.h"
 #include "fileformat.h"
+#include "blockdata.h"
 
 #include <set>
 #include <sstream>
@@ -305,6 +306,7 @@ int PARAM(detail_resolution) = 256;
 
 SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize/2, -worldsize/2, -worldsize/2), worldsize) {
 	graphics = GraphicsContext::plugnew();
+	BlockData::init(graphics);
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
   generator = TerrainGenerator::plugnew(12345);
