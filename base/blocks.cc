@@ -322,6 +322,10 @@ NodeView NodeView::freesibling() const {
 	return NodeView();
 }
 
+NodeView NodeView::get_global(IHitCube goalbox) {
+	return get_global(goalbox.position, goalbox.scale);
+}
+
 NodeView NodeView::get_global(ivec3 pos, int goalscale) {
 	NodeView result = *this;
 	IHitCube goalbox (pos, goalscale);

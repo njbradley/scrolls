@@ -84,7 +84,7 @@ ChildIter<NodePtrT>::ChildIter(const NodePtrT& nnode): node(nnode.child(0)) {
 
 template <typename NodePtrT>
 ChildIter<NodePtrT> ChildIter<NodePtrT>::operator++() {
-	cout << node.node << ' ' << node.node->parent->children + (BDIMS3-1) << endl;
+	//cout << node.node << ' ' << node.node->parent->children + (BDIMS3-1) << endl;
 	if (node.node == node.node->parent->children + (BDIMS3-1)) {
 		node = node.parent().freechild();
 	} else if (node.isfreenode()) {

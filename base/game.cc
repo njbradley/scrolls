@@ -338,14 +338,14 @@ void SingleTreeGame::setup_gameloop() {
   cout << "detail_resolution " << detail_resolution << ' ' << fixed_depth << endl;
   
   generator->generate_chunk(world, fixed_depth);
-  world.split();
-  // NodeView nodearr[8];
-  for (int i = 0; i < BDIMS3; i ++) {
-    world.child(i).set_flag(Block::GENERATION_FLAG);
-    generate_first_world_recurse(world.child(i));
-    // generate_first_world_recurse(world.child(i), (1-ivec3(NodeIndex(i))+2)%2);
-    // nodearr[i] = world.child(i);
-  }
+  //world.split();
+  //// NodeView nodearr[8];
+  //for (int i = 0; i < BDIMS3; i ++) {
+  //  world.child(i).set_flag(Block::GENERATION_FLAG);
+  //  generate_first_world_recurse(world.child(i));
+  //  // generate_first_world_recurse(world.child(i), (1-ivec3(NodeIndex(i))+2)%2);
+  //  // nodearr[i] = world.child(i);
+  //}
   // generate_first_world(nodearr);
   
 	cout << getTime() - start << " Time terrain " << endl;
@@ -606,7 +606,7 @@ void SingleTreeGame::timestep() {
 	double cur_time = getTime();
 	double deltatime = cur_time - last_time;
 	last_time = cur_time;
-	check_loading();
+	//check_loading();
 	std::stringstream debugstr;
 	debugstr << "FPS: " << 1 / deltatime << endl;
 	debugstr << "spectatorpos: " << spectator.position << endl;

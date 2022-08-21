@@ -307,6 +307,7 @@ public:
 	// if the position is inside the root node but there isnt
 	// a node with the given scale, the smallest node will be returned
 	// this means passing 1 as scale guarantees you will recieve a leaf node
+	NodeView get_global(IHitCube goalbox);
 	NodeView get_global(ivec3 pos, int scale);
 	
 	int min_scale() const;

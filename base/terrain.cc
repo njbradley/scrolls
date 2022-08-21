@@ -1,6 +1,8 @@
 #include "terrain.h"
+
 #include "blocks.h"
 #include "blockdata.h"
+#include "blockiter.h"
 
 #include <sstream>
 #include <algorithm>
@@ -592,6 +594,76 @@ EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
 // 	// SolidType<Shift<AddVal<OtherShape<0,LandLevel>, -5>, 0,5,0>, 2>
 // >;
 // EXPORT_PLUGIN_TEMPLATE(TestWorld);
+
+int PARAM(min_scale_div) = 1;
+
+struct SubDivGenerator : public TerrainGenerator {
+	PLUGIN(SubDivGenerator);
+	using TerrainGenerator::TerrainGenerator;
+	
+	void gen_node(NodeView node, int depth) {
+		int score = 0;
+		for (int x = -1; x <= 1; x ++) {
+			for (int y = -1; y <= 1; y ++) {
+				for (int z = -1; z <= 1; z ++) {
+					if (x == 0 and y == 0 and z == 0) continue;
+					ivec3 off (x,y,z);
+					NodeView sidenode = node.get_global(node + off);
+					if (sidenode.isvalid()) {
+						if (sidenode.hasblock() and sidenode.block()->type == &blocktypes::stone) {
+							score += sidenode.scale;
+						}
+					} else if (off == ivec3(0,-1,0)) {
+						score += node.scale * 27;
+					}
+				}
+			}
+		}
+
+		if (score > node.scale * (hash4(seed, node.position, node.scale) % 15 + 5)) {
+			node.set_block(new Block(&blocktypes::dirt));
+		} else if (score > 0 and node.scale > min_scale_div) {
+			node.set_flag(Block::GENERATION_FLAG);
+		} else {
+			node.set_block(new Block(nullptr));
+		}
+	}
+	
+	
+	virtual void generate_chunk(NodeView node, int depth) {
+		node.set_flag(Block::GENERATION_FLAG);
+		cout << "GENERATING __________" << endl;
+		
+		while (node.test_flag(Block::GENERATION_FLAG)) {
+			cout << node.haschildren() << ' ' << node.position << ' ' << node.scale << endl;
+			cout << "starting generation round " << endl;
+			for (NodePtr curnode : NodePtr(node).iter<NodeIter>()) {
+				cout << "brug" << endl;
+				if (curnode.hasblock() and curnode.block()->type == &blocktypes::dirt) {
+					cout << "bksdjflksd" << endl;
+					curnode.block()->type = &blocktypes::stone;
+				}
+			}
+			for (NodeView curnode : node.iter<FlagNodeIter>(Block::GENERATION_FLAG)) {
+				cout << node.position << ' ' << node.scale << endl;
+				curnode.reset_flag(Block::GENERATION_FLAG);
+				if (curnode.haschildren()) continue;
+				
+				cout << " splitting " << curnode.position << ' ' << curnode.scale << endl;
+				curnode.split();
+				for (NodeView curcurnode : curnode.iter<ChildIter>()) {
+					gen_node(curcurnode, depth);
+				}
+			}
+		}
+	}
+
+	virtual int get_height(ivec3 pos) {
+		return 0;
+	}
+};
+
+//EXPORT_PLUGIN(SubDivGenerator);
 
 
 
