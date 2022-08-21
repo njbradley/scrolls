@@ -6,10 +6,20 @@ DEFINE_PLUGIN(RenderBuf);
 
 DEFINE_PLUGIN(GraphicsContext);
 
-RenderData::RenderData() {
-	posdata.scale = -1;
+RenderFace::RenderFace(vec3 center, vec3 xaxis, vec3 yaxis, int sunlight, int blocklight, int texture):
+center(center), xaxis(xaxis), yaxis(yaxis), sunlight(sunlight), blocklight(blocklight), texture(texture) {}
+
+
+void RenderIndex::clear() {
+	if (isvalid()) {
+		buf->del(this);
+		buf = nullptr;
+	}
 }
 
+bool RenderIndex::isvalid() const {
+	return buf != nullptr;
+}
 
 
 DEFINE_AND_EXPORT_PLUGIN(ViewBox);
@@ -40,11 +50,9 @@ void GraphicsContext::set_camera(vec3* newpos, vec2* newrot) {
 }
 
 int GraphicsContext::get_texture_id(string path) {
-	cout << "path " << path << endl;
 	int i = 0;
 	for (string curpath : block_texture_paths) {
 		if (curpath == path or (curpath.length() > path.length() and curpath.substr(curpath.length()-path.length()) == path)) {
-			cout << i << endl;
 			return i;
 		}
 		i ++;

@@ -10,10 +10,7 @@ EXPORT_PLUGIN(DefaultRenderer);
 
 void DefaultRenderer::derender(NodePtr nv, RenderBuf* renderbuf) {
 	for (NodePtr block : BlockIterable<BlockIter<NodePtr>>(nv)) {
-		if (block.block()->renderindex != -1) {
-			renderbuf->del(block.block()->renderindex);
-		}
-		block.block()->renderindex = -1;
+		block.block()->renderindex.clear();
 	}
 }
 
@@ -27,59 +24,46 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 		if (!node.hasblock()) continue;
 		BlockView block = NodeView(node);
 		// continue;
+		block->renderindex.clear();
+		
 		if (block->type != nullptr) {
-			RenderData data;
-			bool visible = false;
-			
-			// cout << "BEGIN BLOCK " << block.position << ' ' << block.scale << endl;
-			data.posdata.pos = node.transform_out(vec3(node.scale)/2.0f);
-			data.posdata.scale = node.scale;
+			RenderFace faces[6];
+			int num_faces = 0;
+			float scale = node.scale/2.0f;
+			vec3 center = node.transform_out(vec3(scale));
 			
 			for (Direction dir : Direction::all) {
-				data.facedata.faces[dir].texture = 0;
-				data.facedata.faces[dir].other = 0;
-				data.facedata.faces[dir].stuff = 0;
 				NodeView sidenode = block.get_global(block.position + ivec3(dir) * block.scale, block.scale);
-				// cout << "  going to " << block.position + ivec3(dir) * block.scale << endl;
-				// cout << "  SIDENODE " << sidenode.position << ' ' << sidenode.scale << endl;
 				if (sidenode.isvalid()) {
 					for (BlockView sideblock : BlockIterable<DirBlockIter<NodeView>>(sidenode, -ivec3(dir))) {
-						// cout << "    SIDEBLOCK " << sideblock.position << ' ' << sideblock.scale << endl;
 						if (sideblock->type == nullptr) {
-							data.facedata.faces[dir].texture = block->type->textures[dir] + 1;
-							data.facedata.faces[dir].sunlight = 0x0f;
-							data.facedata.faces[dir].blocklight = 0x00;
-							data.facedata.faces[dir].other = 0;
-							data.facedata.faces[dir].stuff = 0;
-							data.facearr[int(dir)*2+1] = 10;
-							visible = true;
+							Direction x_dir = (int(dir) + 1)%6;
+							Direction y_dir = (int(dir) + 2)%6;
+							if (dir == Direction::POSITIVE_X or dir == Direction::POSITIVE_Z or dir == Direction::NEGATIVE_Y) {
+								std::swap(x_dir, y_dir);
+							}
+							int sunlight = 220;
+							if (dir == Direction::POSITIVE_Y) {
+								sunlight = 255;
+							} else if (dir == Direction::NEGATIVE_Y) {
+								sunlight = 200;
+							}
+							faces[num_faces++] = RenderFace(
+								center + vec3(ivec3(dir)) * scale,
+								vec3(ivec3(x_dir)) * scale, vec3(ivec3(y_dir)) * scale,
+								sunlight, 0, 
+								block->type->textures[dir] + 1
+							);
+							break;
 						}
 					}
 				}
-				else if (node.isfreenode()) {
-					data.facedata.faces[dir].texture = block->type->textures[dir] + 1;
-					visible = true;
-				}
-					
 			}
 			
-			// for (Direction dir : Direction::all) {
-			// 	cout << data.facearr[int(dir)*2] << ' ';
-			// } cout << endl;
-			
-			if (visible) {
-				if (block->renderindex != -1) {
-					renderbuf->edit(block->renderindex, data);
-				} else {
-					block->renderindex = renderbuf->add(data);
-				}
-			} else if (block->renderindex != -1) {
-				renderbuf->del(block->renderindex);
-				block->renderindex = -1;
+			block->renderindex.clear();
+			if (num_faces != 0) {
+				renderbuf->add(faces, num_faces, &block->renderindex);
 			}
-		} else if (block->renderindex != -1) {
-			renderbuf->del(block->renderindex);
-			block->renderindex = -1;
 		}
 		changed = true;
 	}

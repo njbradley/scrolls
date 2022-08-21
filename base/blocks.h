@@ -5,6 +5,7 @@
 
 #include "physics.h"
 #include "memory.h"
+#include "graphics.h"
 
 // Number of times a block splits
 #define BDIMS 2
@@ -63,7 +64,7 @@ resources
 	
 struct Block {
 	BlockData* type = nullptr;
-	int renderindex = -1;
+	RenderIndex renderindex;
 	uint8 sunlight = 0;
 	uint8 blocklight = 0;
 	

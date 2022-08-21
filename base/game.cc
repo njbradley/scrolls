@@ -309,16 +309,16 @@ SingleTreeGame::SingleTreeGame(): world(ivec3(-worldsize/2, -worldsize/2, -world
 	BlockData::init(graphics);
 	renderer = Renderer::plugnew();
 	controls = Controls::plugnew();
-  generator = TerrainGenerator::plugnew(12345);
-  threadpool = new Pool(4);
+	generator = TerrainGenerator::plugnew(12345);
+	threadpool = new Pool(4);
 }
 
 SingleTreeGame::~SingleTreeGame() {
-  delete threadpool;
-  plugdelete(generator);
-  plugdelete(controls);
-  plugdelete(renderer);
-  plugdelete(graphics);
+	delete threadpool;
+	plugdelete(generator);
+	plugdelete(controls);
+	plugdelete(renderer);
+	plugdelete(graphics);
 }
 
 
@@ -545,60 +545,60 @@ void SingleTreeGame::generate_new_world(NodeView newnode, NodeView oldroot, bool
   } else {
     if (generate) {
       // cout << "generating " << newnode.position << ' ' << newnode.scale << endl;
-      generator->generate_chunk(newnode, min_scale);
+      generator->generate_chunk(newnode, 10000);
     }
   }
 }
 
 void SingleTreeGame::check_loading() {
-  if (generation_lock.try_lock()) {
-    std::unique_lock guard(generation_lock, std::adopt_lock);
-    // IHitCube detailgoalbox (detail_center - detail_resolution*3/4, detail_resolution*3/2);
-    // if (!detailgoalbox.contains(ivec3(spectator.position))) {
-    //   ivec3 localpos = ivec3(spectator.position) - detail_center;
-    //   ivec3 rolldir = glm::sign(localpos * 2 / detail_resolution);
-    //   detail_center += rolldir * detail_resolution;
-      // threadpool->pushJob([this] () {
-        for (int i = 0; i < BDIMS3; i ++) {
-          generate_first_world_recurse(world.child(i));
-        }
-        renderer->render(world, graphics->blockbuf);
-      // });
-    // }
-    return;
-    IHitCube goalbox (world.midpoint() - loading_resolution*3/4, loading_resolution*3/2);
-    if (!goalbox.contains(ivec3(spectator.position))) {
-      ivec3 localpos = ivec3(spectator.position) - goalbox.midpoint();
-      ivec3 rolldir = glm::sign(localpos * 2 / loading_resolution);
-      ivec3 newpos = world.position + rolldir * loading_resolution;
-      // relocate_world(newpos);
-      threadpool->pushJob([this, newpos] () {
-        relocate_world(newpos);
-      });
-    }
-  }
+	if (generation_lock.try_lock()) {
+		std::unique_lock guard(generation_lock, std::adopt_lock);
+		// IHitCube detailgoalbox (detail_center - detail_resolution*3/4, detail_resolution*3/2);
+		// if (!detailgoalbox.contains(ivec3(spectator.position))) {
+		//   ivec3 localpos = ivec3(spectator.position) - detail_center;
+		//   ivec3 rolldir = glm::sign(localpos * 2 / detail_resolution);
+		//   detail_center += rolldir * detail_resolution;
+		// threadpool->pushJob([this] () {
+		//for (int i = 0; i < BDIMS3; i ++) {
+		//  generate_first_world_recurse(world.child(i));
+		//}
+		//renderer->render(world, graphics->blockbuf);
+		// });
+		// }
+		//return;
+		IHitCube goalbox (world.midpoint() - loading_resolution*3/4, loading_resolution*3/2);
+		if (!goalbox.contains(ivec3(spectator.position))) {
+			ivec3 localpos = ivec3(spectator.position) - goalbox.midpoint();
+			ivec3 rolldir = glm::sign(localpos * 2 / loading_resolution);
+			ivec3 newpos = world.position + rolldir * loading_resolution;
+			// relocate_world(newpos);
+			threadpool->pushJob([this, newpos] () {
+					relocate_world(newpos);
+					});
+		}
+	}
 }
 
 void SingleTreeGame::relocate_world(ivec3 newpos) {
-  std::lock_guard guard(generation_lock);
-  
-  cout << "Changing from " << world.position << " to " << newpos << endl;
-  BlockContainer newworld (newpos, world.scale);
-  
-  cout << "generating new world" << endl;
-  generate_new_world(newworld, world, true, false);
-  renderer->render(newworld, graphics->blockbuf);
-  
-  {
-    std::lock_guard guard(world_lock);
-    cout << "copying old world over" << endl;
-    generate_new_world(newworld, world, false, true);
-    newworld.swap(world);
-  }
-  renderer->render(world, graphics->blockbuf);
-  
-  cout << "derendering " << endl;
-  renderer->derender(newworld, graphics->blockbuf);
+	std::lock_guard guard(generation_lock);
+
+	cout << "Changing from " << world.position << " to " << newpos << endl;
+	BlockContainer newworld (newpos, world.scale);
+
+	cout << "generating new world" << endl;
+	generate_new_world(newworld, world, true, false);
+	renderer->render(newworld, graphics->blockbuf);
+
+	{
+		std::lock_guard guard(world_lock);
+		cout << "copying old world over" << endl;
+		generate_new_world(newworld, world, false, true);
+		newworld.swap(world);
+	}
+	renderer->render(world, graphics->blockbuf);
+
+	cout << "derendering " << endl;
+	renderer->derender(newworld, graphics->blockbuf);
 }
 
 void SingleTreeGame::timestep() {
@@ -606,13 +606,13 @@ void SingleTreeGame::timestep() {
 	double cur_time = getTime();
 	double deltatime = cur_time - last_time;
 	last_time = cur_time;
-	// check_loading();
-  std::stringstream debugstr;
-  debugstr << "FPS: " << 1 / deltatime << endl;
-  debugstr << "spectatorpos: " << spectator.position << endl;
-  debuglines->clear();
-  debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
-  
+	check_loading();
+	std::stringstream debugstr;
+	debugstr << "FPS: " << 1 / deltatime << endl;
+	debugstr << "spectatorpos: " << spectator.position << endl;
+	debuglines->clear();
+	debuglines->draw(vec2(-0.99, 0.95), debugstr.str());
+
 	spectator.timestep(cur_time, deltatime);
 	graphics->viewbox->timestep(cur_time, deltatime);
 	graphics->swap();

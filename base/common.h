@@ -90,6 +90,13 @@ struct Direction {
 	constexpr operator ivec3() const { return dir_array[index]; }
 	constexpr operator int() const { return index; }
 	constexpr Direction operator-() const { return Direction((index+3)%6); }
+
+	static constexpr int POSITIVE_X = 0;
+	static constexpr int POSITIVE_Y = 1;
+	static constexpr int POSITIVE_Z = 2;
+	static constexpr int NEGATIVE_X = 3;
+	static constexpr int NEGATIVE_Y = 4;
+	static constexpr int NEGATIVE_Z = 5;
 };
 
 bool getKey(char let);
