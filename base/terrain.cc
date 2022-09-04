@@ -227,6 +227,24 @@ float perlin2d(int seed, float x, float y) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 TerrainValue::TerrainValue(): value(0), deriv(0) {
 	
 }
@@ -258,6 +276,42 @@ TerrainValue TerrainValue::operator/(float val) const {
 	return TerrainValue(value / val, deriv / val);
 }
 
+TerrainValue& TerrainValue::operator+=(const TerrainValue& other) {
+	value += other.value;
+	deriv += other.deriv;
+	return *this;
+}
+TerrainValue& TerrainValue::operator-=(const TerrainValue& other) {
+	value -= other.value;
+	deriv -= other.deriv;
+	return *this;
+}
+TerrainValue& TerrainValue::operator*=(const TerrainValue& other) {
+	value *= other.value;
+	deriv = deriv*other.value + value*other.deriv;
+	return *this;
+}
+
+TerrainValue& TerrainValue::operator+=(float val) {
+	value += val;
+	return *this;
+}
+TerrainValue& TerrainValue::operator-=(float val) {
+	value -= val;
+	return *this;
+}
+TerrainValue& TerrainValue::operator*=(float val) {
+	value *= val;
+	deriv *= val;
+	return *this;
+}
+TerrainValue& TerrainValue::operator/=(float val) {
+	value /= val;
+	deriv /= val;
+	return *this;
+}
+
+
 bool TerrainValue::operator<(const TerrainValue& other) const {
 	return value < other.value;
 }
@@ -269,9 +323,24 @@ TerrainValue TerrainValue::lerp(const TerrainValue& val1, const TerrainValue& va
 	return TerrainValue(val1.value * (1-amount) + val2.value * amount, val1.deriv * (1-amount) + val2.deriv * amount);
 }
 
+TerrainValue TerrainValue::min(const TerrainValue& val1, const TerrainValue& val2) {
+	if (val1.value / val1.deriv > val2.value / val2.deriv) {
+		return val2;
+	} else {
+		return val1;
+	}
+}
 
+TerrainValue TerrainValue::max(const TerrainValue& val1, const TerrainValue& val2) {
+	if (val1.value / val1.deriv < val2.value / val2.deriv) {
+		return val2;
+	} else {
+		return val1;
+	}
+}
 
-ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block): TerrainValue(terrvalue), btype(block) {
+ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerGen* layergen, Biome* biome):
+TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome) {
 	
 }
 
@@ -282,16 +351,219 @@ bool ShapeValue::operator>(const ShapeValue& other) const {
 	return value > other.value;
 }
 
-BlockData* ShapeValue::blocktype(int scale) {
-	if (needs_split(scale)) {
-		return BLOCK_SPLIT;
-	}
-	return value >= 0 ? btype : BLOCK_NULL;
-}
-
 bool ShapeValue::needs_split(int scale) {
 	return std::abs(value) < (scale-1) * 1.73f * deriv;
 }
+
+
+
+TerrainValue perlin2d(int seed, vec3 pos, int scale, int height, int layer = 0) {
+	return TerrainValue(
+		perlin2d(seed + layer, pos.x / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
+	);
+}
+
+
+TerrainValue perlin3d(int seed, vec3 pos, int scale, int height, int layer) {
+	return TerrainValue(
+		perlin3d(seed + layer, pos.x / float(scale), pos.y / float(scale), pos.z / float(scale)) * height / 2,
+		1.5f * height / scale
+	);
+}
+
+
+
+
+
+
+
+LerpLayerGen::LerpLayerGen(LayerGen* shape, vec3 samplepoint, float scale): position(samplepoint), scale(scale) {
+	float max_val = -999999;
+	float min_val = 999999;
+	for (int i = 0; i < 8; i ++) {
+		vec3 off (i/4, i/2%2, i%2);
+		off *= scale;
+		Layers tmplayers;
+		shape->add_value(&tmplayers, samplepoint + off);
+		for (int j = 0; j < 8; j ++) {
+			float val = tmplayers.layers()[j].value;
+			samples[i].layers()[j] = val;
+			max_val = std::max(max_val, val);
+			min_val = std::min(min_val, val);
+		}
+		//cout << samplepoint + off << ' ' << samples[i].ground_level.value << endl;
+	}
+
+	max_deriv = (max_val - min_val) / scale;
+}
+
+void LerpLayerGen::add_value(Layers* outlayers, vec3 pos) {
+	for (int i = 0; i < Layers::num_layers; i ++) {
+		vec3 off = (pos - position) / scale;
+		
+		float x0 = lerp(samples[0].layers()[i], samples[4].layers()[i], off.x);
+		float x1 = lerp(samples[1].layers()[i], samples[5].layers()[i], off.x);
+		float x2 = lerp(samples[2].layers()[i], samples[6].layers()[i], off.x);
+		float x3 = lerp(samples[3].layers()[i], samples[7].layers()[i], off.x);
+
+		float y0 = lerp(x0, x2, off.y);
+		float y1 = lerp(x1, x3, off.y);
+		
+		outlayers->layers()[i] += lerp(y0, y1, off.z);
+	}
+}
+
+
+struct AddLayerGen : public LayerGen {
+	LayerGen* gen1;
+	LayerGen* gen2;
+	
+	AddLayerGen(LayerGen* gen1, LayerGen* gen2): gen1(gen1), gen2(gen2) {}
+	
+	virtual void add_value(Layers* outlayers, vec3 pos) {
+		gen1->add_value(outlayers, pos);
+		gen2->add_value(outlayers, pos);
+	}
+};
+
+struct HeightFalloff : public LayerGen {
+	float falloff;
+	
+	HeightFalloff(float val): falloff(val) {}
+	
+	virtual void add_value(Layers* outlayers, vec3 pos) {
+		float val = pos.y * falloff;
+		outlayers->ground_level += val;
+		outlayers->stone_level += val;
+	}
+};
+
+
+struct ShapeBiome : Biome {
+	BiomeResult gen_shapes(vector<ShapeValue> shapes, ivec3 pos, int scale) {
+		for (ShapeValue val : shapes) {
+			if (val.needs_split(scale) or val.value < 0) {
+				BiomeResult result;
+				result.blocktype = val.btype;
+				result.nextlayergen = val.layergen;
+				result.nextbiome = val.biome;
+				result.needs_split = val.needs_split(scale);
+				return result;
+			}
+		}
+		BiomeResult result;
+		result.blocktype = nullptr;
+		result.nextlayergen = nullptr;
+		result.nextbiome = nullptr;
+		result.needs_split = false;
+		return result;
+	}
+};
+
+
+
+
+struct MountainBiome : ShapeBiome {
+	virtual BiomeResult gen_func(Layers* layers, ivec3 pos, int scale) {
+		return gen_shapes({
+			ShapeValue(layers->ground_level, &blocktypes::stone)
+		}, pos, scale);
+	}
+} mountainbiome;
+
+struct MountainLayerGen : LayerGen {
+	virtual void add_value(Layers* outlayers, vec3 pos) {
+		outlayers->ground_level -= 40;
+	}
+} mountainlayergen;
+
+
+struct RootLayerGen : public LayerGen {
+	virtual void add_value(Layers* outlayers, vec3 pos) {
+		outlayers->ground_level += TerrainValue(pos.y, 1);
+		outlayers->stone_level += TerrainValue(pos.y, 1);
+		
+		outlayers->temperature += perlin2d(12345, pos, 128, 2, 0);
+
+		outlayers->ground_level += perlin3d(12345, pos, 128, 128, 1);
+	}
+};
+
+
+struct ZeroLayerGen : LayerGen {
+	virtual void add_value(Layers* layers, vec3 pos) {}
+} zerolayergen;
+
+
+struct RootBiome : ShapeBiome {
+	virtual BiomeResult gen_func(Layers* layers, ivec3 pos, int scale) {
+		return gen_shapes({
+			ShapeValue(layers->temperature, &blocktypes::stone, &mountainlayergen, &mountainbiome),
+			ShapeValue(layers->ground_level, &blocktypes::grass)
+		}, pos, scale);
+	}
+};
+
+
+RootLayerGen root_layergen;
+LayerGen* BiomeGenerator::root_layergen = &::root_layergen;
+
+RootBiome root_biome;
+Biome* BiomeGenerator::root_biome = &::root_biome;
+
+void BiomeGenerator::generate_chunk(NodeView node, int depth) {
+	gen_node(node, root_layergen, root_biome, depth);
+}
+
+BlockData* BiomeGenerator::gen_node(NodeView node, LayerGen* layergen, Biome* biome, int depth) {
+	vec3 pos = node.position;
+	pos += float(node.scale)/2;
+	Layers layers;
+	layergen->add_value(&layers, pos);
+
+	BiomeResult result = biome->gen_func(&layers, node.position, node.scale);
+	
+	if (result.needs_split) {
+		node.split();
+		
+		BlockData* blocktype = gen_node(node.child(0), layergen, biome, depth-1);
+		for (int i = 0; i < BDIMS3; i ++) {
+			BlockData* newtype = gen_node(node.child(i), layergen, biome, depth-1);
+			blocktype = (newtype == blocktype) ? blocktype : BLOCK_SPLIT;
+		}
+
+		if (blocktype != BLOCK_SPLIT) {
+			node.join();
+			node.set_block(new Block(blocktype));
+		}
+
+		return blocktype;
+	} else if (result.nextlayergen != nullptr) {
+		LerpLayerGen newlayergen (layergen, node.position, node.scale);
+		AddLayerGen finalgen (&newlayergen, result.nextlayergen);
+		return gen_node(node, &finalgen, (result.nextbiome == nullptr) ? biome : result.nextbiome, depth);
+	} else if (result.nextbiome != nullptr) {
+		return gen_node(node, layergen, result.nextbiome, depth);
+	} else {
+		node.set_block(new Block(result.blocktype));
+		return result.blocktype;
+	}
+}
+
+int BiomeGenerator::get_height(ivec3 pos) {
+	return 0;
+}
+
+
+
+
+EXPORT_PLUGIN(BiomeGenerator);
+
+
+
+
+
 
 
 
@@ -569,21 +841,21 @@ ShapeValue dirt_level(ShapeContext* ctx, vec3 pos) {
 	);
 }
 
-EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
-	// LayerResolver<>,
-	LayerResolver<land_level, shifted_land_level<5>>,
-	// LayerResolver<flat_terrain<16>>,
-	// LayerResolver<sloped_terrain<16,1,3>>,
-	set_blocktype<blocktypes::stone,layer_ref<0>>,
-	// set_blocktype<1,layer_ref<1>>,
-	// set_blocktype<2,layer_ref<2>>
-	dirt_level,
-	grass_level
-	// set_blocktype<3,land_level>,
-	// set_blocktype<1,shifted_land_level<3>>,
-	// set_blocktype<2,shifted_land_level<5>>
-	// set_blocktype<1,land_level>
->);
+//EXPORT_PLUGIN_TEMPLATE(ShapeResolver<
+//	// LayerResolver<>,
+//	LayerResolver<land_level, shifted_land_level<5>>,
+//	// LayerResolver<flat_terrain<16>>,
+//	// LayerResolver<sloped_terrain<16,1,3>>,
+//	set_blocktype<blocktypes::stone,layer_ref<0>>,
+//	// set_blocktype<1,layer_ref<1>>,
+//	// set_blocktype<2,layer_ref<2>>
+//	dirt_level,
+//	grass_level
+//	// set_blocktype<3,land_level>,
+//	// set_blocktype<1,shifted_land_level<3>>,
+//	// set_blocktype<2,shifted_land_level<5>>
+//	// set_blocktype<1,land_level>
+//>);
 
 
 // using LandLevel = HeightFalloff<Add<Perlin3d<64,0>, Perlin3d<9,1>, RidgePerlin3d<32,4>, Perlin2d<512,9>>, 1>;

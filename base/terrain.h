@@ -57,6 +57,11 @@ float perlin3d(int seed, float x, float y, float z);
 float perlin2d(int seed, float x, float y);
 
 
+
+class LayerGen;
+class Biome;
+
+
 struct TerrainValue {
 	float value = 0;
 	float deriv = 0;
@@ -74,19 +79,34 @@ struct TerrainValue {
 	TerrainValue operator*(float val) const;
 	TerrainValue operator/(float val) const;
 	
+	TerrainValue& operator+=(const TerrainValue& other);
+	TerrainValue& operator-=(const TerrainValue& other);
+	TerrainValue& operator*=(const TerrainValue& other);
+	TerrainValue& operator/=(const TerrainValue& other);
+	
+	TerrainValue& operator+=(float val);
+	TerrainValue& operator-=(float val);
+	TerrainValue& operator*=(float val);
+	TerrainValue& operator/=(float val);
+
 	bool operator<(const TerrainValue& other) const;
 	bool operator>(const TerrainValue& other) const;
 	
 	static TerrainValue lerp(const TerrainValue& val1, const TerrainValue& val2, float amount);
+	static TerrainValue min(const TerrainValue& val1, const TerrainValue& val2);
+	static TerrainValue max(const TerrainValue& val1, const TerrainValue& val2);
 };
+
 
 struct ShapeValue : protected TerrainValue {
 	using TerrainValue::value;
 	using TerrainValue::deriv;
+	LayerGen* layergen;
 	BlockData* btype;
+	Biome* biome;
 	
 	ShapeValue() {}
-	ShapeValue(const TerrainValue& terrvalue, BlockData* btype);
+	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerGen* layergen = nullptr, Biome* biome = nullptr);
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;
@@ -94,6 +114,144 @@ struct ShapeValue : protected TerrainValue {
 	BlockData* blocktype(int scale);
 	bool needs_split(int scale);
 };
+
+
+
+
+
+
+
+
+
+
+template <typename LayerT>
+struct LayersTempl {
+	static constexpr int num_layers = 4;
+	LayerT ground_level;
+	LayerT stone_level;
+	LayerT wetness;
+	TerrainValue temperature;
+
+	LayerT* layers() {
+		return (LayerT*)this;
+	}
+};
+
+using Layers = LayersTempl<TerrainValue>;
+
+
+struct LayerGen {
+	virtual void add_value(Layers* layers, vec3 pos) = 0;
+};
+
+
+struct BlockGen {
+	virtual ShapeValue gen_value(Layers* layers, vec3 pos) = 0;
+};
+
+
+struct BiomeResult {
+	LayerGen* nextlayergen;
+	Biome* nextbiome;
+	BlockData* blocktype;
+	bool needs_split;
+};
+
+struct Biome {
+	virtual BiomeResult gen_func(Layers* layers, ivec3 pos, int scale) = 0;
+};
+
+struct LerpLayerGen : LayerGen {
+	vec3 position;
+	float scale;
+	LayersTempl<float> samples[8];
+	float max_deriv;
+	//Layers samples[8];
+	
+	LerpLayerGen(LayerGen* shape, vec3 samplepos, float scale);
+	virtual void add_value(Layers* layers, vec3 pos);
+};
+
+
+
+
+
+
+
+class TerrainGenerator {
+	BASE_PLUGIN(TerrainGenerator, (int seed));
+public:
+	int seed;
+	
+	TerrainGenerator(int seed);
+	virtual ~TerrainGenerator() {}
+	
+	virtual void generate_chunk(NodeView node, int depth) = 0;
+	virtual int get_height(ivec3 pos) = 0;
+};
+
+class TerrainDecorator {
+	BASE_PLUGIN(TerrainDecorator, (int seed));
+public:
+	int seed;
+	
+	TerrainDecorator(int nseed);
+	virtual ~TerrainDecorator() {}
+	
+	virtual void decorate_chunk(NodeView node) = 0;
+};
+
+
+
+
+
+
+
+
+
+
+struct BiomeGenerator : public TerrainGenerator {
+	PLUGIN(BiomeGenerator);
+	using TerrainGenerator::TerrainGenerator;
+	static Biome* root_biome;
+	static LayerGen* root_layergen;
+	
+	virtual void generate_chunk(NodeView node, int depth);
+	virtual int get_height(ivec3 pos);
+	BlockData* gen_node(NodeView node, LayerGen* layergen, Biome* biome, int depth);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct TerrainContext {
 	int seed;
@@ -119,28 +277,6 @@ private:
 using ShapeFunc = ShapeValue (*) (ShapeContext* ctx, vec3 pos);
 
 
-class TerrainGenerator {
-	BASE_PLUGIN(TerrainGenerator, (int seed));
-public:
-	int seed;
-	
-	TerrainGenerator(int seed);
-	virtual ~TerrainGenerator() {}
-	
-	virtual void generate_chunk(NodeView node, int depth) = 0;
-	virtual int get_height(ivec3 pos) = 0;
-};
-
-class TerrainDecorator {
-	BASE_PLUGIN(TerrainDecorator, (int seed));
-public:
-	int seed;
-	
-	TerrainDecorator(int nseed);
-	virtual ~TerrainDecorator() {}
-	
-	virtual void decorate_chunk(NodeView node) = 0;
-};
 
 // These are the methods that terrain shapes must implement
 //
