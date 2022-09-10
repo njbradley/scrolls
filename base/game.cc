@@ -25,8 +25,8 @@
 DEFINE_PLUGIN(Game);
 
 
-EXPORT_PLUGIN(SingleTreeGame);
 EXPORT_PLUGIN(SingleGame);
+EXPORT_PLUGIN(SingleTreeGame);
 
 int PARAM(worldsize) = 256;
 

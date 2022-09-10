@@ -58,8 +58,15 @@ float perlin2d(int seed, float x, float y);
 
 
 
-class LayerGen;
-class Biome;
+struct TerrainContext;
+struct TerrainValue;
+struct Layers;
+struct ShapeValue;
+struct BiomeResult;
+
+using LayerFunc = void (*) (TerrainContext* ctx, Layers* outlayers, vec3 pos);
+using ShapeFunc = ShapeValue (*) (TerrainContext* ctx, const Layers* layers, vec3 pos);
+using BiomeFunc = BiomeResult (*) (TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale);
 
 
 struct TerrainValue {
@@ -101,12 +108,12 @@ struct TerrainValue {
 struct ShapeValue : protected TerrainValue {
 	using TerrainValue::value;
 	using TerrainValue::deriv;
-	LayerGen* layergen;
+	LayerFunc layergen;
 	BlockData* btype;
-	Biome* biome;
+	BiomeFunc biome;
 	
 	ShapeValue() {}
-	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerGen* layergen = nullptr, Biome* biome = nullptr);
+	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;
@@ -116,60 +123,41 @@ struct ShapeValue : protected TerrainValue {
 };
 
 
+struct TerrainContext {
+	int seed;
+};
 
-
-
-
-
-
-
-
-template <typename LayerT>
-struct LayersTempl {
+struct Layers {
 	static constexpr int num_layers = 4;
-	LayerT ground_level;
-	LayerT stone_level;
-	LayerT wetness;
+	TerrainValue ground_level;
+	TerrainValue stone_level;
+	TerrainValue wetness;
 	TerrainValue temperature;
 
-	LayerT* layers() {
-		return (LayerT*)this;
+	TerrainValue* layers() {
+		return (TerrainValue*)this;
 	}
 };
 
-using Layers = LayersTempl<TerrainValue>;
-
-
-struct LayerGen {
-	virtual void add_value(Layers* layers, vec3 pos) = 0;
-};
-
-
-struct BlockGen {
-	virtual ShapeValue gen_value(Layers* layers, vec3 pos) = 0;
-};
-
-
 struct BiomeResult {
-	LayerGen* nextlayergen;
-	Biome* nextbiome;
+	LayerFunc nextlayergen;
+	BiomeFunc nextbiome;
 	BlockData* blocktype;
 	bool needs_split;
 };
 
-struct Biome {
-	virtual BiomeResult gen_func(Layers* layers, ivec3 pos, int scale) = 0;
-};
 
-struct LerpLayerGen : LayerGen {
+
+struct LerpLayerGen {
 	vec3 position;
 	float scale;
-	LayersTempl<float> samples[8];
-	float max_deriv;
-	//Layers samples[8];
+	struct FloatLayers {
+		float values[Layers::num_layers];
+	} samples[8];
+	float max_deriv[Layers::num_layers];
 	
-	LerpLayerGen(LayerGen* shape, vec3 samplepos, float scale);
-	virtual void add_value(Layers* layers, vec3 pos);
+	LerpLayerGen(TerrainContext* ctx, LayerFunc shape, vec3 samplepos, float scale);
+	void add_value(Layers* layers, vec3 pos);
 };
 
 
@@ -213,12 +201,12 @@ public:
 struct BiomeGenerator : public TerrainGenerator {
 	PLUGIN(BiomeGenerator);
 	using TerrainGenerator::TerrainGenerator;
-	static Biome* root_biome;
-	static LayerGen* root_layergen;
+	static BiomeFunc root_biome;
+	static LayerFunc root_layergen;
 	
 	virtual void generate_chunk(NodeView node, int depth);
 	virtual int get_height(ivec3 pos);
-	BlockData* gen_node(NodeView node, LayerGen* layergen, Biome* biome, int depth);
+	BlockData* gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth);
 };
 
 
@@ -252,7 +240,7 @@ struct BiomeGenerator : public TerrainGenerator {
 
 
 
-
+/*
 struct TerrainContext {
 	int seed;
 	vec3 sample_pos;
@@ -275,7 +263,6 @@ private:
 };
 
 using ShapeFunc = ShapeValue (*) (ShapeContext* ctx, vec3 pos);
-
 
 
 // These are the methods that terrain shapes must implement
@@ -313,6 +300,7 @@ struct ShapeResolver : public TerrainGenerator {
 	virtual int get_height(ivec3 pos);
 };
 
+*/
 
 
 // template <typename ... Shapes>
