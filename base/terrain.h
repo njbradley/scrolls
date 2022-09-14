@@ -102,6 +102,7 @@ struct TerrainValue {
 	static TerrainValue lerp(const TerrainValue& val1, const TerrainValue& val2, float amount);
 	static TerrainValue min(const TerrainValue& val1, const TerrainValue& val2);
 	static TerrainValue max(const TerrainValue& val1, const TerrainValue& val2);
+	static TerrainValue abs(const TerrainValue& val);
 };
 
 

@@ -339,6 +339,10 @@ TerrainValue TerrainValue::max(const TerrainValue& val1, const TerrainValue& val
 	}
 }
 
+TerrainValue TerrainValue::abs(const TerrainValue& val) {
+	return TerrainValue(std::abs(val.value), val.deriv);
+}
+
 ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerFunc layergen, BiomeFunc biome):
 TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome) {
 	
@@ -455,7 +459,8 @@ BiomeResult mountain_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos,
 
 void mountain_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	//TerrainValue falloff (std::min(-outlayers->temperature.value * 10, 1.0f), outlayers->temperature.deriv / outlayers->temperature.value);
-	outlayers->ground_level -= outlayers->temperature * 5 * (perlin2d(ctx->seed, pos, 64, 64, 2) - 32);// + perlin3d(ctx->seed, pos, 32, 32, 3));
+	outlayers->ground_level -= 20;
+	//outlayers->ground_level -= outlayers->temperature * 5 * (perlin2d(ctx->seed, pos, 64, 64, 2) - 32);// + perlin3d(ctx->seed, pos, 32, 32, 3));
 }
 
 
@@ -473,8 +478,8 @@ void root_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	outlayers->temperature += perlin2d(12345, pos, 128, 2, 0);
 	outlayers->wetness += perlin2d(12345, pos, 128, 2, 0);
 
-	outlayers->ground_level += perlin3d(12345, pos, 128, 128, 1);
-	outlayers->stone_level += perlin3d(12345, pos-vec3(0,10,0), 128, 128, 1);
+	outlayers->ground_level += perlin3d(12345, pos, 128, 2, 1);
+	outlayers->stone_level += perlin3d(12345, pos-vec3(0,10,0), 128, 2, 1);
 }
 
 void zero_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {}
@@ -490,10 +495,9 @@ BiomeResult root_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int
 	TerrainValue high = layers->ground_level * -1.0f + 0.33f;
 	
 	return generate_biome_shapes({
-		ShapeValue(layers->temperature, 
-		ShapeValue(layers->temperature, &blocktypes::stone, &mountain_layergen, &mountain_biome),
-		ShapeValue(layers->temperature - 0.5f, &blocktypes::grass, &zero_layergen, &plains_biome),
-		ShapeValue(
+		ShapeValue(high, &blocktypes::stone, &mountain_layergen, &mountain_biome),
+		ShapeValue(low, &blocktypes::grass, &zero_layergen, &plains_biome),
+		ShapeValue(layers->ground_level, &blocktypes::dirt)
 	}, pos, scale);
 }
 
