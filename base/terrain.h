@@ -112,9 +112,10 @@ struct ShapeValue : protected TerrainValue {
 	LayerFunc layergen;
 	BlockData* btype;
 	BiomeFunc biome;
+	TerrainValue falloff;
 	
 	ShapeValue() {}
-	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
+	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr, TerrainValue falloff = TerrainValue(1,0));
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;

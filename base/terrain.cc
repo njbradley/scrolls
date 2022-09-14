@@ -343,8 +343,8 @@ TerrainValue TerrainValue::abs(const TerrainValue& val) {
 	return TerrainValue(std::abs(val.value), val.deriv);
 }
 
-ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerFunc layergen, BiomeFunc biome):
-TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome) {
+ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerFunc layergen, BiomeFunc biome, TerrainValue falloff)
+TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome), falloff(falloff) {
 	
 }
 
@@ -459,8 +459,7 @@ BiomeResult mountain_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos,
 
 void mountain_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	//TerrainValue falloff (std::min(-outlayers->temperature.value * 10, 1.0f), outlayers->temperature.deriv / outlayers->temperature.value);
-	outlayers->ground_level -= 20;
-	//outlayers->ground_level -= outlayers->temperature * 5 * (perlin2d(ctx->seed, pos, 64, 64, 2) - 32);// + perlin3d(ctx->seed, pos, 32, 32, 3));
+	outlayers->ground_level -= outlayers->temperature * 5 * (perlin2d(ctx->seed, pos, 64, 64, 2) - 32);// + perlin3d(ctx->seed, pos, 32, 32, 3));
 }
 
 
@@ -483,6 +482,10 @@ void root_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 }
 
 void zero_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {}
+
+template <LayerFunc layerfunc, 
+void interp_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {
+	
 
 
 BiomeResult root_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale) {
