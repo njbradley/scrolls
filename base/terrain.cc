@@ -481,7 +481,7 @@ void mountain_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 		//cout << falloff_raw.value << ' ' << ctx->falloff.value << ' ' << ctx->falloff.deriv << endl;
 	//}
 	//cout << falloff.value << ' ' << ctx->falloff.value << endl;
-	outlayers->ground_level -= (perlin2d(ctx->seed, pos, 64, 64, 2) + 32) * 1 * ctx->falloff;// * outlayers->temperature;// + perlin3d(ctx->seed, pos, 32, 32, 3));
+	outlayers->ground_level -= (perlin2d(ctx->seed, pos, 64, 64, 2) + 32) * 1;// * falloff;// * outlayers->temperature;// + perlin3d(ctx->seed, pos, 32, 32, 3));
 }
 
 

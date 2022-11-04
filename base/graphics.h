@@ -9,12 +9,13 @@ struct RenderFace {
 	vec3 center;
 	vec3 xaxis;
 	vec3 yaxis;
+	vec2 uvsize;
 	int sunlight;
 	int blocklight;
 	int texture;
 
 	RenderFace() {}
-	RenderFace(vec3 center, vec3 xaxis, vec3 yaxis, int sunlight, int blocklight, int texture);
+	RenderFace(vec3 center, vec3 xaxis, vec3 yaxis, vec2 uvsize, int sunlight, int blocklight, int texture);
 
 	template <typename floatIter, typename intIter>
 	void to_points(floatIter poses, floatIter uvs, intIter data);
@@ -88,8 +89,8 @@ void RenderFace::to_points(floatIter poses, floatIter uvs, intIter data) {
 		*(poses++) = pos.x;
 		*(poses++) = pos.y;
 		*(poses++) = pos.z;
-		*(uvs++) = x;
-		*(uvs++) = y;
+		*(uvs++) = x * uvsize.x;
+		*(uvs++) = y * uvsize.y;
 		*(data++) = sunlight;
 		*(data++) = blocklight;
 		*(data++) = texture;

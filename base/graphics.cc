@@ -6,8 +6,8 @@ DEFINE_PLUGIN(RenderBuf);
 
 DEFINE_PLUGIN(GraphicsContext);
 
-RenderFace::RenderFace(vec3 center, vec3 xaxis, vec3 yaxis, int sunlight, int blocklight, int texture):
-center(center), xaxis(xaxis), yaxis(yaxis), sunlight(sunlight), blocklight(blocklight), texture(texture) {}
+RenderFace::RenderFace(vec3 center, vec3 xaxis, vec3 yaxis, vec2 uvsize, int sunlight, int blocklight, int texture):
+center(center), xaxis(xaxis), yaxis(yaxis), uvsize(uvsize), sunlight(sunlight), blocklight(blocklight), texture(texture) {}
 
 
 void RenderIndex::clear() {
