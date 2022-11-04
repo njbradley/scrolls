@@ -56,7 +56,7 @@ GLuint load_array(vector<string>& paths, int size) {
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
 
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,GL_RGBA, size, size, 4, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0,GL_RGBA, size, size, paths.size(), 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
 	
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);

@@ -40,9 +40,13 @@ void BlockData::init(GraphicsContext* graphics) {
 
 namespace blocktypes {
 	BlockData dirt ({.id = 1, .texture = "dirt.bmp"});
-	BlockData grass ({.id = 1, .texture = "grass.bmp"});
-	BlockData stone ({.id = 1, .texture = "stone.bmp"});
-	BlockData wood ({.id = 1, .texture = "wood.bmp"});
+	BlockData grass ({.id = 2, .texture = "grass.bmp"});
+	BlockData stone ({.id = 3, .texture = "stone.bmp"});
+	BlockData wood ({.id = 4, .texture = "wood.bmp"});
+	BlockData snow ({.id = 5, .texture = "snow.bmp"});
+	BlockData leaves ({.id = 6, .texture = "leaves.bmp"});
+	BlockData lightstone ({.id = 7, .texture = "lightstone.bmp"});
+	BlockData darkstone ({.id = 8, .texture = "darkstone.bmp"});
 };
 
 

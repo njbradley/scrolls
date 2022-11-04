@@ -260,7 +260,11 @@ TerrainValue TerrainValue::operator-(const TerrainValue& other) const {
 	return TerrainValue(value - other.value, deriv + other.deriv);
 }
 TerrainValue TerrainValue::operator*(const TerrainValue& other) const {
-	return TerrainValue(value * other.value, deriv*std::abs(other.value) + std::abs(value)*other.deriv);
+	float dist1 = value / deriv, dist2 = other.value / other.deriv;
+	float newval = value * other.value;
+	float newdist = std::min(dist1, dist2);
+	return TerrainValue(newval, newdist * newval);
+	//return TerrainValue(value * other.value, deriv*std::abs(other.value) + std::abs(value)*other.deriv);
 }
 
 TerrainValue TerrainValue::operator+(float val) const {
@@ -324,27 +328,29 @@ TerrainValue TerrainValue::lerp(const TerrainValue& val1, const TerrainValue& va
 }
 
 TerrainValue TerrainValue::min(const TerrainValue& val1, const TerrainValue& val2) {
-	if (val1.value / val1.deriv > val2.value / val2.deriv) {
-		return val2;
-	} else {
-		return val1;
-	}
+	return TerrainValue(std::min(val1.value, val2.value), std::max(val1.deriv, val2.deriv));
+	//if (val1.value / val1.deriv > val2.value / val2.deriv) {
+	//	return val2;
+	//} else {
+	//	return val1;
+	//}
 }
 
 TerrainValue TerrainValue::max(const TerrainValue& val1, const TerrainValue& val2) {
-	if (val1.value / val1.deriv < val2.value / val2.deriv) {
-		return val2;
-	} else {
-		return val1;
-	}
+	return TerrainValue(std::max(val1.value, val2.value), std::max(val1.deriv, val2.deriv));
+	//if (val1.value / val1.deriv < val2.value / val2.deriv) {
+	//	return val2;
+	//} else {
+	//	return val1;
+	//}
 }
 
 TerrainValue TerrainValue::abs(const TerrainValue& val) {
 	return TerrainValue(std::abs(val.value), val.deriv);
 }
 
-ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerFunc layergen, BiomeFunc biome, TerrainValue falloff)
-TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome), falloff(falloff) {
+ShapeValue::ShapeValue(const TerrainValue& terrvalue, BlockData* block, LayerFunc layergen, BiomeFunc biome):
+TerrainValue(terrvalue), btype(block), layergen(layergen), biome(biome) {
 	
 }
 
@@ -429,6 +435,7 @@ void add_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 }
 
 
+BiomeResult mountain_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale);
 BiomeResult generate_biome_shapes(vector<ShapeValue> shapes, ivec3 pos, int scale) {
 	for (ShapeValue val : shapes) {
 		if (val.needs_split(scale) or val.value < 0) {
@@ -437,6 +444,10 @@ BiomeResult generate_biome_shapes(vector<ShapeValue> shapes, ivec3 pos, int scal
 			result.nextlayergen = val.layergen;
 			result.nextbiome = val.biome;
 			result.needs_split = val.needs_split(scale);
+			result.falloff = TerrainValue(-val.value, val.deriv);
+			if (result.nextbiome == mountain_biome and result.falloff.value > 10) {
+				cout << "   " << result.falloff.value << endl;
+			}
 			return result;
 		}
 	}
@@ -445,6 +456,7 @@ BiomeResult generate_biome_shapes(vector<ShapeValue> shapes, ivec3 pos, int scal
 	result.nextlayergen = nullptr;
 	result.nextbiome = nullptr;
 	result.needs_split = false;
+	result.falloff = TerrainValue(1,0);
 	return result;
 }
 
@@ -452,21 +464,36 @@ BiomeResult generate_biome_shapes(vector<ShapeValue> shapes, ivec3 pos, int scal
 
 BiomeResult mountain_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale) {
 	return generate_biome_shapes({
-		ShapeValue(TerrainValue::max(layers->ground_level, perlin2d(ctx->seed, pos, 32, 8, 4) + TerrainValue(50-pos.y, 1)), &blocktypes::dirt),
+		ShapeValue(TerrainValue::max(layers->ground_level, perlin2d(ctx->seed, pos, 32, 8, 4) + TerrainValue(50-pos.y, 1)), &blocktypes::snow),
 		ShapeValue(layers->ground_level, &blocktypes::stone)
 	}, pos, scale);
 }
 
 void mountain_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	//TerrainValue falloff (std::min(-outlayers->temperature.value * 10, 1.0f), outlayers->temperature.deriv / outlayers->temperature.value);
-	outlayers->ground_level -= outlayers->temperature * 5 * (perlin2d(ctx->seed, pos, 64, 64, 2) - 32);// + perlin3d(ctx->seed, pos, 32, 32, 3));
+	//outlayers->ground_level -= (perlin2d(ctx->seed, pos, 64, 64, 2) - 32) * 10;// + perlin3d(ctx->seed, pos, 32, 32, 3));
+	//cout << outlayers->temperature.value << endl;
+	//cout << ctx->falloff.value << ' ' << ctx->falloff.deriv << endl;
+	TerrainValue falloff = TerrainValue::min((outlayers->elevation * -1.0f + 0.33f) * -8.0f, TerrainValue(1,0));
+	TerrainValue falloff_raw = (outlayers->elevation * -1.0f + 0.33f) * -1.0f;
+
+	//if (ctx->falloff.value > 10) {
+		//cout << falloff_raw.value << ' ' << ctx->falloff.value << ' ' << ctx->falloff.deriv << endl;
+	//}
+	//cout << falloff.value << ' ' << ctx->falloff.value << endl;
+	outlayers->ground_level -= (perlin2d(ctx->seed, pos, 64, 64, 2) + 32) * 1 * ctx->falloff;// * outlayers->temperature;// + perlin3d(ctx->seed, pos, 32, 32, 3));
 }
 
 
 
+void plains_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {
+	//layers->ground_level -= 
+}
+
 BiomeResult plains_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale) {
 	return generate_biome_shapes({
-		ShapeValue(layers->ground_level, &blocktypes::stone)
+		//ShapeValue(layers->ground_level-10, &blocktypes::stone),
+		ShapeValue(layers->ground_level, &blocktypes::grass)
 	}, pos, scale);
 }
 
@@ -474,17 +501,15 @@ void root_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	outlayers->ground_level += TerrainValue(pos.y, 1);
 	outlayers->stone_level += TerrainValue(pos.y, 1);
 	
-	outlayers->temperature += perlin2d(12345, pos, 128, 2, 0);
-	outlayers->wetness += perlin2d(12345, pos, 128, 2, 0);
-
-	outlayers->ground_level += perlin3d(12345, pos, 128, 2, 1);
-	outlayers->stone_level += perlin3d(12345, pos-vec3(0,10,0), 128, 2, 1);
+	outlayers->temperature += perlin3d(12345, pos, 128, 2, 0) - pos.y * 0.01f;
+	outlayers->wetness += perlin3d(12345, pos, 128, 2, 2);
+	outlayers->elevation += perlin2d(12345, pos, 128, 2, 1);
 }
 
 void zero_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {}
 
-template <LayerFunc layerfunc, 
-void interp_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {
+//template <LayerFunc layerfunc, 
+//void interp_layergen(TerrainContext* ctx, Layers* layers, vec3 pos) {
 	
 
 
@@ -494,12 +519,12 @@ BiomeResult root_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int
 	TerrainValue cold = layers->temperature + 0.33f;
 	TerrainValue hot = layers->temperature * -1.0f + 0.33f;
 
-	TerrainValue low = layers->ground_level + 0.33f;
-	TerrainValue high = layers->ground_level * -1.0f + 0.33f;
+	TerrainValue low = layers->elevation + 0.33f;
+	TerrainValue high = layers->elevation * -1.0f + 0.33f;
 	
 	return generate_biome_shapes({
 		ShapeValue(high, &blocktypes::stone, &mountain_layergen, &mountain_biome),
-		ShapeValue(low, &blocktypes::grass, &zero_layergen, &plains_biome),
+		ShapeValue(low, &blocktypes::grass, &plains_layergen, &plains_biome),
 		ShapeValue(layers->ground_level, &blocktypes::dirt)
 	}, pos, scale);
 }
@@ -512,30 +537,34 @@ BiomeFunc BiomeGenerator::root_biome = &::root_biome;
 void BiomeGenerator::generate_chunk(NodeView node, int depth) {
 	TerrainContext context;
 	context.seed = seed;
+	context.falloff = TerrainValue(1,0);
 	LerpLayerGen initial_gen (&context, zero_layergen, node.position, node.scale);
-	gen_node(node, &initial_gen, root_layergen, root_biome, depth);
+	gen_node(node, &initial_gen, root_layergen, root_biome, depth, TerrainValue(1,0));
 }
 
-BlockData* BiomeGenerator::gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth) {
+BlockData* BiomeGenerator::gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth, TerrainValue falloff) {
 	vec3 pos = node.position;
 	pos += float(node.scale)/2;
 	TerrainContext context;
 	context.seed = seed;
+	context.falloff = falloff;
 	
 	Layers layers;
 	prevlayergen->add_value(&layers, pos);
 	layergen(&context, &layers, pos);
 
 	BiomeResult result = biome(&context, &layers, node.position, node.scale);
+	//cout << result.falloff.value << "--------------" << endl;
+	//cout << result.falloff.value << ' ' << (void*)biome << ' ' << (void*)&mountain_biome << endl;
 	//result.nextlayergen = nullptr;
 	//result.nextbiome = nullptr;
 	
 	if (result.needs_split) {
 		node.split();
 		
-		BlockData* blocktype = gen_node(node.child(0), prevlayergen, layergen, biome, depth-1);
+		BlockData* blocktype = gen_node(node.child(0), prevlayergen, layergen, biome, depth-1, falloff);
 		for (int i = 0; i < BDIMS3; i ++) {
-			BlockData* newtype = gen_node(node.child(i), prevlayergen, layergen, biome, depth-1);
+			BlockData* newtype = gen_node(node.child(i), prevlayergen, layergen, biome, depth-1, falloff);
 			blocktype = (newtype == blocktype) ? blocktype : BLOCK_SPLIT;
 		}
 
@@ -547,9 +576,13 @@ BlockData* BiomeGenerator::gen_node(NodeView node, LerpLayerGen* prevlayergen, L
 		return blocktype;
 	} else if (result.nextlayergen != nullptr) {
 		LerpLayerGen lerplayergen (&context, layergen, node.position, node.scale);
-		return gen_node(node, &lerplayergen, result.nextlayergen, (result.nextbiome == nullptr) ? biome : result.nextbiome, depth);
+		if (result.nextbiome == nullptr) {
+			return gen_node(node, &lerplayergen, result.nextlayergen, biome, depth, falloff);
+		} else {
+			return gen_node(node, &lerplayergen, result.nextlayergen, result.nextbiome, depth, result.falloff);
+		}
 	} else if (result.nextbiome != nullptr) {
-		return gen_node(node, prevlayergen, layergen, result.nextbiome, depth);
+		return gen_node(node, prevlayergen, layergen, result.nextbiome, depth, result.falloff);
 	} else {
 		node.set_block(new Block(result.blocktype));
 		return result.blocktype;

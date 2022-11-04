@@ -112,10 +112,9 @@ struct ShapeValue : protected TerrainValue {
 	LayerFunc layergen;
 	BlockData* btype;
 	BiomeFunc biome;
-	TerrainValue falloff;
 	
 	ShapeValue() {}
-	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr, TerrainValue falloff = TerrainValue(1,0));
+	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;
@@ -127,14 +126,16 @@ struct ShapeValue : protected TerrainValue {
 
 struct TerrainContext {
 	int seed;
+	TerrainValue falloff;
 };
 
 struct Layers {
-	static constexpr int num_layers = 4;
+	static constexpr int num_layers = 5;
 	TerrainValue ground_level;
 	TerrainValue stone_level;
 	TerrainValue wetness;
 	TerrainValue temperature;
+	TerrainValue elevation;
 
 	TerrainValue* layers() {
 		return (TerrainValue*)this;
@@ -145,6 +146,7 @@ struct BiomeResult {
 	LayerFunc nextlayergen;
 	BiomeFunc nextbiome;
 	BlockData* blocktype;
+	TerrainValue falloff;
 	bool needs_split;
 };
 
@@ -208,7 +210,7 @@ struct BiomeGenerator : public TerrainGenerator {
 	
 	virtual void generate_chunk(NodeView node, int depth);
 	virtual int get_height(ivec3 pos);
-	BlockData* gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth);
+	BlockData* gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth, TerrainValue falloff);
 };
 
 

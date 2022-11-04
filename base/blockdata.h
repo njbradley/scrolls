@@ -31,6 +31,10 @@ namespace blocktypes {
 	extern BlockData grass;
 	extern BlockData stone;
 	extern BlockData wood;
+	extern BlockData snow;
+	extern BlockData leaves;
+	extern BlockData lightstone;
+	extern BlockData darkstone;
 }
 
 #endif

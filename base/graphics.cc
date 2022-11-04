@@ -52,7 +52,8 @@ void GraphicsContext::set_camera(vec3* newpos, vec2* newrot) {
 int GraphicsContext::get_texture_id(string path) {
 	int i = 0;
 	for (string curpath : block_texture_paths) {
-		if (curpath == path or (curpath.length() > path.length() and curpath.substr(curpath.length()-path.length()) == path)) {
+		if (curpath == path or (curpath.length() > path.length() and curpath.substr(curpath.length()-path.length()) == path
+				and curpath[curpath.length()-path.length()-1] == '/')) {
 			return i;
 		}
 		i ++;

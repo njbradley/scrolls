@@ -337,15 +337,15 @@ void SingleTreeGame::setup_gameloop() {
   }
   cout << "detail_resolution " << detail_resolution << ' ' << fixed_depth << endl;
   
-  generator->generate_chunk(world, fixed_depth);
-  //world.split();
-  //// NodeView nodearr[8];
-  //for (int i = 0; i < BDIMS3; i ++) {
-  //  world.child(i).set_flag(Block::GENERATION_FLAG);
-  //  generate_first_world_recurse(world.child(i));
-  //  // generate_first_world_recurse(world.child(i), (1-ivec3(NodeIndex(i))+2)%2);
-  //  // nodearr[i] = world.child(i);
-  //}
+  //generator->generate_chunk(world, fixed_depth);
+  world.split();
+  // NodeView nodearr[8];
+  for (int i = 0; i < BDIMS3; i ++) {
+    world.child(i).set_flag(Block::GENERATION_FLAG);
+    generate_first_world_recurse(world.child(i));
+    // generate_first_world_recurse(world.child(i), (1-ivec3(NodeIndex(i))+2)%2);
+    // nodearr[i] = world.child(i);
+  }
   // generate_first_world(nodearr);
   
 	cout << getTime() - start << " Time terrain " << endl;
