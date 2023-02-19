@@ -65,8 +65,11 @@ struct ShapeValue;
 struct BiomeResult;
 
 using LayerFunc = void (*) (TerrainContext* ctx, Layers* outlayers, vec3 pos);
-using ShapeFunc = ShapeValue (*) (TerrainContext* ctx, const Layers* layers, vec3 pos);
+//using ShapeFunc = ShapeValue (*) (TerrainContext* ctx, const Layers* layers, vec3 pos);
+using ShapeFunc = TerrainValue (*) (const Layers* layers);
 using BiomeFunc = BiomeResult (*) (TerrainContext* ctx, const Layers* layers, ivec3 pos, int scale);
+
+TerrainValue default_falloff(const Layers* layers);
 
 
 struct TerrainValue {
@@ -112,9 +115,12 @@ struct ShapeValue : protected TerrainValue {
 	LayerFunc layergen;
 	BlockData* btype;
 	BiomeFunc biome;
+	ShapeFunc falloff;
 	
 	ShapeValue() {}
 	ShapeValue(const TerrainValue& terrvalue, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
+	ShapeValue(const TerrainValue& terrvalue, ShapeFunc func, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
+	//ShapeValue(ShapeFunc func, BlockData* btype, LayerFunc layergen = nullptr, BiomeFunc biome = nullptr);
 	
 	bool operator<(const ShapeValue& other) const;
 	bool operator>(const ShapeValue& other) const;
@@ -126,7 +132,7 @@ struct ShapeValue : protected TerrainValue {
 
 struct TerrainContext {
 	int seed;
-	TerrainValue falloff;
+	ShapeFunc falloff;
 };
 
 struct Layers {
@@ -146,7 +152,7 @@ struct BiomeResult {
 	LayerFunc nextlayergen;
 	BiomeFunc nextbiome;
 	BlockData* blocktype;
-	TerrainValue falloff;
+	ShapeFunc falloff;
 	bool needs_split;
 };
 
@@ -210,7 +216,7 @@ struct BiomeGenerator : public TerrainGenerator {
 	
 	virtual void generate_chunk(NodeView node, int depth);
 	virtual int get_height(ivec3 pos);
-	BlockData* gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth, TerrainValue falloff);
+	BlockData* gen_node(NodeView node, LerpLayerGen* prevlayergen, LayerFunc layergen, BiomeFunc biome, int depth, ShapeFunc falloff);
 };
 
 

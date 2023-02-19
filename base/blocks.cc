@@ -252,7 +252,7 @@ void NodePtr::del_tree(Node* node) {
 }
 
 
-BlockIterable<ChildIter<NodePtr>> NodePtr::children() {
+NodeIterable<ChildIter<NodePtr>> NodePtr::children() {
 	return iter<ChildIter>();
 }
 
@@ -353,7 +353,7 @@ int NodeView::min_scale() const {
 	return cur_scale;
 }
 
-BlockIterable<ChildIter<NodeView>> NodeView::children() {
+NodeIterable<ChildIter<NodeView>> NodeView::children() {
 	return iter<ChildIter>();
 }
 
@@ -457,7 +457,7 @@ FreeNodeView::operator NodeView() const {
 	return NodeView(node, localpos, scale);
 }
 
-BlockIterable<ChildIter<FreeNodeView>> FreeNodeView::children() {
+NodeIterable<ChildIter<FreeNodeView>> FreeNodeView::children() {
 	return iter<ChildIter>();
 }
 

@@ -9,7 +9,7 @@ DEFINE_PLUGIN(Renderer);
 EXPORT_PLUGIN(DefaultRenderer);
 
 void DefaultRenderer::derender(NodePtr nv, RenderBuf* renderbuf) {
-	for (NodePtr block : BlockIterable<BlockIter<NodePtr>>(nv)) {
+	for (NodePtr block : NodeIterable<BlockIter<NodePtr>>(nv)) {
 		block.block()->renderindex.clear();
 	}
 }
@@ -17,7 +17,7 @@ void DefaultRenderer::derender(NodePtr nv, RenderBuf* renderbuf) {
 bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 	bool changed = false;
 	
-	// for (BlockView block : BlockIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
+	// for (BlockView block : NodeIterable<FlagBlockIter>(mainblock, Block::RENDER_FLAG)) {
 	// for (NodeView& node : mainblock.iter<FlagNodeIter>(Block::RENDER_FLAG)) {
 	for (FreeNodeView& node : FreeNodeView(mainblock).iter<FlagNodeIter>(Block::RENDER_FLAG)) {
 		node.reset_flag(Block::RENDER_FLAG);
@@ -35,7 +35,7 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 			for (Direction dir : Direction::all) {
 				NodeView sidenode = block.get_global(block.position + ivec3(dir) * block.scale, block.scale);
 				if (sidenode.isvalid()) {
-					for (BlockView sideblock : BlockIterable<DirBlockIter<NodeView>>(sidenode, -ivec3(dir))) {
+					for (BlockView sideblock : NodeIterable<DirBlockIter<NodeView>>(sidenode, -ivec3(dir))) {
 						if (sideblock->type == nullptr) {
 							Direction x_dir = (int(dir) + 1)%6;
 							Direction y_dir = (int(dir) + 2)%6;

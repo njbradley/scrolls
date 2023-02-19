@@ -43,7 +43,7 @@ class Block;
 class BlockData;
 class BlockView;
 template <typename NodePtrT> class BlockIter;
-template <typename Iterator> class BlockIterable;
+template <typename Iterator> class NodeIterable;
 class BlockContainer;
 class GraphicsContext;
 class RenderBuf;

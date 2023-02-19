@@ -4,6 +4,9 @@
 #include "common.h"
 #include "blocks.h"
 
+// The base class for all node iterators
+// Iteration is customizable with protected virtual functions.
+// 
 template <typename NodePtrT>
 class NodeIter {
 public:
@@ -25,7 +28,7 @@ protected:
 	NodePtr highest_node;
 	
 	virtual NodeIndex startpos();
-  virtual NodeIndex endpos();
+	virtual NodeIndex endpos();
 	virtual NodeIndex increment_func(NodeIndex index);
 	
 	virtual bool valid_tree() const;
@@ -61,11 +64,11 @@ public:
 
 
 template <typename Iterator>
-class BlockIterable {
+class NodeIterable {
 public:
 	Iterator iter;
 	template <typename ... Args>
-	BlockIterable(Args&& ... args): iter(std::forward<Args>(args)...) { iter.get_safe(); }
+	NodeIterable(Args&& ... args): iter(std::forward<Args>(args)...) { iter.get_safe(); }
 	
 	Iterator begin() { return iter; }
 	Iterator end() { Iterator enditer = iter; enditer.to_end(); return enditer; }

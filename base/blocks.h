@@ -157,7 +157,9 @@ struct NodeChildrenIter {
 
 
 // Class that represents a pointer to a Node in an octree.
-//
+// Contains no computed values (ie size or position) that
+// NodeView and similar have. Use this class when you don't
+// need any of these.
 
 class NodePtr {
 public:
@@ -255,8 +257,8 @@ public:
 	void copy_tree(NodePtr other);
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
-	BlockIterable<NodeIterT<NodePtr>> iter(Args ... args);
-	BlockIterable<ChildIter<NodePtr>> children();
+	NodeIterable<NodeIterT<NodePtr>> iter(Args ... args);
+	NodeIterable<ChildIter<NodePtr>> children();
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
@@ -284,7 +286,9 @@ protected:
 // A nodeview points to a position on the block tree, while
 // also keeping track of the current position and size of the
 // node pointed to.
-// The node can be modified using split/join and set methods
+// Use this class when a NodePtr wouldn't do (you need position),
+// But you don't need to know the true global position of a block
+// 
 class NodeView : public NodePtr, public IHitCube {
 public:
 	
@@ -310,11 +314,12 @@ public:
 	NodeView get_global(IHitCube goalbox);
 	NodeView get_global(ivec3 pos, int scale);
 	
+	// returns the smallest scale of any child block below this node
 	int min_scale() const;
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
-	BlockIterable<NodeIterT<NodeView>> iter(Args ... args);
-	BlockIterable<ChildIter<NodeView>> children();
+	NodeIterable<NodeIterT<NodeView>> iter(Args ... args);
+	NodeIterable<ChildIter<NodeView>> children();
 	
 protected:
 	RefCounter<NodeView> highparent;
@@ -339,8 +344,8 @@ public:
 	explicit operator NodeView() const;
 	
 	template <template <typename> typename NodeIterT, typename ... Args>
-	BlockIterable<NodeIterT<FreeNodeView>> iter(Args ... args);
-	BlockIterable<ChildIter<FreeNodeView>> children();
+	NodeIterable<NodeIterT<FreeNodeView>> iter(Args ... args);
+	NodeIterable<ChildIter<FreeNodeView>> children();
 	
 protected:
 	void recalculate_position();
@@ -558,7 +563,7 @@ inline bool NodePtr::operator!=(const NodePtr& other) const {
 }
 
 template <template <typename> typename NodeIterT, typename ... Args>
-BlockIterable<NodeIterT<NodePtr>> NodePtr::iter(Args ... args) {
+NodeIterable<NodeIterT<NodePtr>> NodePtr::iter(Args ... args) {
 	return {*this, args...};
 }
 
@@ -590,12 +595,12 @@ inline FreeNodeView::FreeNodeView() {
 // }
 
 template <template <typename> typename NodeIterT, typename ... Args>
-BlockIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
+NodeIterable<NodeIterT<NodeView>> NodeView::iter(Args ... args) {
 	return {*this, args...};
 }
 
 template <template <typename> typename NodeIterT, typename ... Args>
-BlockIterable<NodeIterT<FreeNodeView>> FreeNodeView::iter(Args ... args) {
+NodeIterable<NodeIterT<FreeNodeView>> FreeNodeView::iter(Args ... args) {
 	return {*this, args...};
 }
 
