@@ -38,18 +38,56 @@ HitCube HitCube::transform_out(const HitCube& cube) const {
 
 bool HitCube::contains(vec3 point) const {
 	point = transform_in(point);
+	return point.x >= 0 and point.y >= 0 and point.z >= 0
+		and point.x <= scale and point.y <= scale and point.z <= scale;
 	return point.x >= position.x and point.y >= position.y and point.z >= position.z
 				and point.x <= position.x + scale and point.y <= position.y + scale and point.z <= position.z + scale;
 }
 
 bool HitCube::collides(vec3 point) const {
 	point = transform_in(point);
-	return point.x > position.x and point.y > position.y and point.z > position.z
-			and point.x < position.x + scale and point.y < position.y + scale and point.z < position.z + scale;
+	return point.x > 0 and point.y > 0 and point.z > 0
+		and point.x < scale and point.y < scale and point.z < scale;
 }
 
 bool HitCube::collides(const HitCube& globalother) const {
 	HitCube other = transform_in(globalother);
+	
+	float x_proj = 5;
+	
+	
+	
+	return false;
+}
+
+
+
+
+
+
+
+HitBox HitBox::transform_in(const HitBox& cube) const {
+	return HitBox(transform_in(cube.position), cube.dims, glm::inverse(rotation) * cube.rotation);
+}
+
+HitBox HitBox::transform_out(const HitBox& cube) const {
+	return HitBox(transform_out(cube.position), cube.dims, rotation * cube.rotation);
+}
+
+bool HitBox::contains(vec3 point) const {
+	point = transform_in(point);
+	return point.x >= 0 and point.y >= 0 and point.z >= 0
+		and point.x <= dims.x and point.y <= dims.y and point.z <= dims.z;
+}
+
+bool HitBox::collides(vec3 point) const {
+	point = transform_in(point);
+	return point.x > 0 and point.y > 0 and point.z > 0
+		and point.x < dims.x and point.y < dims.y and point.z < dims.z;
+}
+
+bool HitBox::collides(const HitBox& globalother) const {
+	HitBox other = transform_in(globalother);
 	
 	float x_proj = 5;
 	

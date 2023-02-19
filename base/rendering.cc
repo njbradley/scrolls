@@ -49,8 +49,8 @@ bool DefaultRenderer::render(NodeView mainblock, RenderBuf* renderbuf) {
 								sunlight = 200;
 							}
 							faces[num_faces++] = RenderFace(
-								center + vec3(ivec3(dir)) * scale,
-								vec3(ivec3(x_dir)) * scale, vec3(ivec3(y_dir)) * scale,
+								center + vec3(dir) * scale,
+								vec3(x_dir) * scale, vec3(y_dir) * scale,
 								vec2(block.scale, block.scale),
 								sunlight, 0, 
 								block->type->textures[dir] + 1

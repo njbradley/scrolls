@@ -28,7 +28,7 @@ DEFINE_PLUGIN(Game);
 EXPORT_PLUGIN(SingleGame);
 EXPORT_PLUGIN(SingleTreeGame);
 
-int PARAM(worldsize) = 64;
+int PARAM(worldsize) = 8;
 
 const int renderdistance = worldsize;  // FIX THIS VARIABLE NAME
 const int chunkloadingstart = 3;
@@ -367,36 +367,36 @@ void SingleTreeGame::setup_gameloop() {
 		cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 
 
-		// NodeView node = world.get_global(ivec3(0,0,0), 4);
-		// node = node.parent();
+		NodeView node = world.get_global(ivec3(0,0,0), 4);
+		node = node.parent();
 
-		//for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
-		//    cout << view.position << ' ' << view.scale << endl;
-		//    if (view.isfreenode()) {
-		//      cout << "FREE "<< view.position << ' ' << view.scale << endl;
-		//    }
-		//}
+		for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
+		    //cout << view.position << ' ' << view.scale << endl;
+		    if (view.isfreenode()) {
+		      cout << "FREE "<< view.position << ' ' << view.scale << endl;
+		    }
+		}
 
-		// cout << "adding stuff" << endl;
-		// node = world.get_global(ivec3(0,0,0), 4);
-		//
-		// node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
-		// node = node.freechild();
-		// node.set_block(new Block(1));
-		// node.subdivide();
-		// node = node.parent();
-		//
-		// node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
-		// node = node.freechild();
-		// node.set_block(new Block(2));
-		// node = node.parent().parent();
+		cout << "adding stuff" << endl;
+		node = world.get_global(ivec3(0,0,0), 4);
+		
+		node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
+		node = node.freechild();
+		node.set_block(new Block(&blocktypes::dirt));
+		node.subdivide();
+		node = node.parent();
+		
+		node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
+		node = node.freechild();
+		node.set_block(new Block(&blocktypes::grass));
+		node = node.parent().parent();
 
-		// for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
-		//   //cout << view.position << ' ' << view.scale << endl;
-		//   if (view.isfreenode()) {
-		//     cout << "FREE "<< view.position << ' ' << view.scale << endl;
-		//   }
-		// }
+		for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
+			//cout << view.position << ' ' << view.scale << endl;
+			if (view.isfreenode()) {
+				cout << "FREE "<< view.position << ' ' << view.scale << ' ' << view.rotation << endl;
+			}
+		}
 
 		start = getTime();
 		num = 0;

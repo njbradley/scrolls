@@ -18,6 +18,8 @@ using glm::vec3;
 using glm::ivec3;
 using glm::vec2;
 using glm::ivec2;
+using glm::vec4;
+using glm::ivec4;
 using glm::quat;
 
 using uint8 = uint8_t;
@@ -88,6 +90,7 @@ struct Direction {
 	}
 	
 	constexpr operator ivec3() const { return dir_array[index]; }
+	constexpr operator vec3() const { return dir_array[index]; }
 	constexpr operator int() const { return index; }
 	constexpr Direction operator-() const { return Direction((index+3)%6); }
 
@@ -102,6 +105,16 @@ struct Direction {
 bool getKey(char let);
 double getTime();
 
+inline ostream& operator<<(ostream& out, ivec4 pos) {
+	out << pos.x << ',' << pos.y << ',' << pos.z << ',' << pos.w;
+	return out;
+}
+
+inline ostream& operator<<(ostream& out, vec4 pos) {
+	out << pos.x << ',' << pos.y << ',' << pos.z << ',' << pos.w;
+	return out;
+}
+
 inline ostream& operator<<(ostream& out, ivec3 pos) {
 	out << pos.x << ',' << pos.y << ',' << pos.z;
 	return out;
@@ -109,6 +122,21 @@ inline ostream& operator<<(ostream& out, ivec3 pos) {
 
 inline ostream& operator<<(ostream& out, vec3 pos) {
 	out << pos.x << ',' << pos.y << ',' << pos.z;
+	return out;
+}
+
+inline ostream& operator<<(ostream& out, ivec2 pos) {
+	out << pos.x << ',' << pos.y;
+	return out;
+}
+
+inline ostream& operator<<(ostream& out, vec2 pos) {
+	out << pos.x << ',' << pos.y;
+	return out;
+}
+
+inline ostream& operator<<(ostream& out, quat rot) {
+	out << rot.w << ',' << rot.x << ',' << rot.y << ',' << rot.z;
 	return out;
 }
 
