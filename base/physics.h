@@ -36,6 +36,8 @@ struct IHitCube {
 	friend IHitCube operator+(const IHitCube& cube, ivec3 pos);
 	friend IHitCube operator+(ivec3 pos, const IHitCube& cube);
 	IHitCube& operator+=(ivec3 pos);
+
+	friend ostream& operator<<(ostream& out, const IHitCube& cube);
 };
 
 
@@ -66,6 +68,8 @@ struct HitCube {
 	friend HitCube operator+(const HitCube& cube, ivec3 pos);
 	friend HitCube operator+(ivec3 pos, const HitCube& cube);
 	HitCube& operator+=(ivec3 pos);
+
+	friend ostream& operator<<(ostream& out, const HitCube& cube);
 };
 
 struct HitBox {
@@ -92,6 +96,8 @@ struct HitBox {
 	vec3 transform_out_dir(vec3 point) const;
 	HitBox transform_in(const HitBox& box) const;
 	HitBox transform_out(const HitBox& box) const;
+
+	friend ostream& operator<<(ostream& out, const HitBox& cube);
 };
 
 
@@ -142,6 +148,10 @@ inline IHitCube& IHitCube::operator+=(ivec3 pos) {
 	return *this;
 }
 
+inline ostream& operator<<(ostream& out, const IHitCube& cube) {
+	return out << "IHitCube(" << cube.position << ' ' << cube.scale << ")";
+}
+
 
 
 inline HitCube::HitCube() {
@@ -185,6 +195,9 @@ inline HitCube& HitCube::operator+=(ivec3 pos) {
 	return *this;
 }
 
+inline ostream& operator<<(ostream& out, const HitCube& cube) {
+	return out << "HitCube(" << cube.position << ' ' << cube.scale << ")";
+}
 
 
 
@@ -222,6 +235,10 @@ inline vec3 HitBox::transform_out(vec3 point) const {
 
 inline vec3 HitBox::transform_out_dir(vec3 point) const {
 	return rotation * point;
+}
+
+inline ostream& operator<<(ostream& out, const HitBox& cube) {
+	return out << "HitBox(" << cube.position << ' ' << cube.dims << ")";
 }
 
 #endif

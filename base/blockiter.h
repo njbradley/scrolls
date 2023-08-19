@@ -122,7 +122,22 @@ protected:
 	virtual bool valid_node() const { return node.hasblock(); }
 };
 
+template <typename NodePtrT, typename HitBoxT>
+class CollisionIter : public NodeIter<NodePtrT> {
+public:
+	HitBoxT hitbox;
+	CollisionIter(const NodePtrT& node, HitBoxT box): NodeIter<NodePtrT>(node), hitbox(box) {}
+protected:
+	using NodeIter<NodePtrT>::node;
+	virtual bool valid_tree() const { return hitbox.collides(node); }
+};
 
+template <typename NodePtrT>
+using IHitCubeIter = CollisionIter<NodePtrT,IHitCube>;
+template <typename NodePtrT>
+using HitCubeIter = CollisionIter<NodePtrT,HitCube>;
+template <typename NodePtrT>
+using HitBoxIter = CollisionIter<NodePtrT,HitBox>;
 
 
 

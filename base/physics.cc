@@ -88,10 +88,70 @@ bool HitBox::collides(vec3 point) const {
 
 bool HitBox::collides(const HitBox& globalother) const {
 	HitBox other = transform_in(globalother);
+	//cout << "Finding collision of " << *this << ' ' << globalother << endl;
+	//cout << " in my space " << other << endl;
+
+	vec3 midpoint = dims/2.0f;
+	vec3 other_midpoint = other.transform_out(other.dims/2.0f);
+	vec3 vec_between = other_midpoint - midpoint;
 	
-	float x_proj = 5;
-	
-	
-	
-	return false;
+	if (glm::length(vec_between) > (glm::length(dims) + glm::length(other.dims))/2.0f) {
+		return false;
+	}
+
+	if (glm::length(vec_between) < (std::min(dims.x, std::min(dims.y, dims.z))
+			+ std::min(other.dims.x, std::min(other.dims.y, other.dims.z))) / 2.0f) {
+		//cout << "Shortcut touching" << vec_between << ' ' << dims << ' ' << other.dims << endl;;
+		return true;
+	}
+
+	vec3 dirx = other.transform_out_dir(vec3(1,0,0));
+	vec3 diry = other.transform_out_dir(vec3(0,1,0));
+	vec3 dirz = other.transform_out_dir(vec3(0,0,1));
+
+	vector<vec3> axes_to_check {
+		{1,0,0},
+		{0,1,0},
+		{0,0,1}
+	};
+
+	if (other.rotation != quat(1,0,0,0)) {
+		cout << "adding new axes to check" << endl;
+		vec3 new_axes[] = {
+			dirx, diry, dirz,
+			glm::cross(vec3(1,0,0), dirx),
+			glm::cross(vec3(1,0,0), diry),
+			glm::cross(vec3(1,0,0), dirz),
+			glm::cross(vec3(0,1,0), dirx),
+			glm::cross(vec3(0,1,0), diry),
+			glm::cross(vec3(0,1,0), dirz),
+			glm::cross(vec3(0,0,1), dirx),
+			glm::cross(vec3(0,0,1), diry),
+			glm::cross(vec3(0,0,1), dirz)
+		};
+
+		axes_to_check.insert(axes_to_check.end(), new_axes, new_axes+12);
+	}
+
+	for (vec3 axis : axes_to_check) {
+		if (glm::length(axis) > 0) {
+			axis = axis / glm::length(axis);
+			//cout << "  axis " << axis;
+			float my_proj = glm::dot(dims/2.0f, glm::abs(axis));
+			float other_proj = std::abs(glm::dot(dirx, axis))
+			                 + std::abs(glm::dot(diry, axis))
+			                 + std::abs(glm::dot(dirz, axis));
+			float between_proj = std::abs(glm::dot(vec_between, axis));
+			
+			float space = between_proj - (my_proj + other_proj) / 2.0f;
+			//cout << "   " << my_proj << ' ' << other_proj << ' ' << between_proj << ' ' << space << endl;
+			//cout << "     " << dirx << ' ' << diry << ' ' << dirz << ' ' << endl;
+			if (space >= 0) {
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
+

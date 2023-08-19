@@ -377,19 +377,19 @@ void SingleTreeGame::setup_gameloop() {
 		    }
 		}
 
-		cout << "adding stuff" << endl;
-		node = world.get_global(ivec3(0,0,0), 4);
-		
-		node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
-		node = node.freechild();
-		node.set_block(new Block(&blocktypes::dirt));
-		node.subdivide();
-		node = node.parent();
-		
-		node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
-		node = node.freechild();
-		node.set_block(new Block(&blocktypes::grass));
-		node = node.parent().parent();
+		//cout << "adding stuff" << endl;
+		//node = world.get_global(ivec3(0,0,0), 4);
+		//
+		//node.add_freechild(vec3(0.5,0.5,0.5), quat(1,0,0,0));
+		//node = node.freechild();
+		//node.set_block(new Block(&blocktypes::dirt));
+		//node.subdivide();
+		//node = node.parent();
+		//
+		//node.add_freechild(vec3(0,1,0.5), quat(1,0,0,0));
+		//node = node.freechild();
+		//node.set_block(new Block(&blocktypes::grass));
+		//node = node.parent().parent();
 
 		for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
 			//cout << view.position << ' ' << view.scale << endl;
@@ -418,6 +418,35 @@ void SingleTreeGame::setup_gameloop() {
 		cout << getTime() - start << " Time iter (num blocks): " << num << endl;
 
 		cout << world.max_depth() << " max_depth" << endl;
+
+		HitBox box (ivec3(0,0,0), ivec3(1.1,1.1,1.1), quat(1,0,0,0));
+
+		for (NodeView node : world.iter<NodeIter>()) {
+			if (box.collides(node)) cout << node << endl;
+		}
+
+		cout << "REAL TEST " << endl;
+		for (NodeView node : world.iter<HitBoxIter>(box)) {
+			cout << node << endl;
+		}
+
+		IHitCube cubes[] = {
+			{{0,0,0}, 2},
+			{{1,1,1}, 2},
+			{{-2,-2,-2}, 4},
+			{{-2,0,0}, 2}
+		};
+
+		for (IHitCube& cube1 : cubes) {
+			for (IHitCube& cube2 : cubes) {
+				cout << cube1 << ' ' << cube2 << ' ' << cube1.collides(cube2) << HitBox(cube1).collides(cube2) << endl;
+			}
+		}
+
+		HitBox box1 (vec3(0,0,0), vec3(1,1,1), quat(1,0,0,0));
+		HitBox box2 (vec3(1,1,1), vec3(1,1,1), quat(1,0,0,0));
+
+		cout << box1 << ' ' << box2 << ' ' << box1.collides(box2) << endl;
 	});
   
 }

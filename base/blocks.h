@@ -88,7 +88,6 @@ struct Node {
 	union {
 		Node* parent = nullptr;
 		BlockContainer* container;
-		FreeNode* freecontainer;
 	};
 	union {
 		Node* children = nullptr;
@@ -101,7 +100,6 @@ struct Node {
 };
 
 struct FreeNode : Node {
-	Node* highparent;
 	FreeNode* next = nullptr;
 	quat rotation;
 	vec3 offset;
@@ -172,7 +170,6 @@ public:
 	// and some methods that can fail (get_global, child)
 	// will return an instance that is not valid on failure
 	bool isvalid() const;
-	operator bool() const;
 	// whether the node has a block (accessed by block())
 	// hasblock() and haschildren() cannot both be true
 	bool hasblock() const;
@@ -244,6 +241,9 @@ public:
 	void on_change();
 	void update_depth();
 	void update_depth(uint8 new_depth);
+
+	// returns a short string with the status of the node, abbreviated
+	string status_str() const;
 	
 	// modify the block that this node holds.
 	void set_block(Block* block);
@@ -262,6 +262,8 @@ public:
 	
 	bool operator==(const NodePtr& other) const;
 	bool operator!=(const NodePtr& other) const;
+	
+	friend ostream& operator<<(ostream& out, NodePtr node);
 protected:
 	Node* node = nullptr;
 	
@@ -321,9 +323,9 @@ public:
 	NodeIterable<NodeIterT<NodeView>> iter(Args ... args);
 	NodeIterable<ChildIter<NodeView>> children();
 	
+	friend ostream& operator<<(ostream& out, const NodeView& node);
 protected:
 	RefCounter<NodeView> highparent;
-	// std::shared_ptr<NodeView> highparent;
 };
 
 // class FreeNodeView : public NodeView, public HitCube {
@@ -347,11 +349,11 @@ public:
 	NodeIterable<NodeIterT<FreeNodeView>> iter(Args ... args);
 	NodeIterable<ChildIter<FreeNodeView>> children();
 	
+	friend ostream& operator<<(ostream& out, const FreeNodeView& node);
 protected:
 	void recalculate_position();
 	
 	RefCounter<FreeNodeView> highparent;
-	// std::shared_ptr<FreeNodeView> highparent;
 };
 
 // BlockView is a more specific NodeView that is restricted
@@ -518,7 +520,7 @@ inline uint32 NodePtr::test_flag(uint32 flag) const { ASSERT(isvalid());
 	return node->flags & flag;
 }
 
-inline NodeIndex NodePtr::parentindex() const { ASSERT(isvalid());
+inline NodeIndex NodePtr::parentindex() const { ASSERT(isvalid() and !isfreenode());
 	return node - node->parent->children;
 }
 
@@ -562,6 +564,10 @@ inline bool NodePtr::operator!=(const NodePtr& other) const {
 	return !(*this == other);
 }
 
+inline ostream& operator<<(ostream& out, NodePtr node) {
+	return out << "NodePtr(" << node.status_str() << ' ' << node.node << ")";
+}
+
 template <template <typename> typename NodeIterT, typename ... Args>
 NodeIterable<NodeIterT<NodePtr>> NodePtr::iter(Args ... args) {
 	return {*this, args...};
@@ -584,10 +590,17 @@ NodePtr(node), IHitCube(position, scale), highparent(hparent) {
 	
 }
 
+inline ostream& operator<<(ostream& out, const NodeView& node) {
+	return out << "NodeView(" << node.status_str() << ' ' << node.position << ' ' << node.scale << ")";
+}
 
 
 inline FreeNodeView::FreeNodeView() {
 	
+}
+
+inline ostream& operator<<(ostream& out, const FreeNodeView& node) {
+	return out << "NodeView(" << node.status_str() << ' ' << node.position << ' ' << node.scale << ' ' << node.rotation << ")";
 }
 
 // inline FreeNodeView::FreeNodeView(const NodeView& nodeview): NodeView(nodeview) {

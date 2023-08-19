@@ -136,6 +136,20 @@ void NodePtr::set_all_flags(uint32 flag) {
 	}
 }
 
+string NodePtr::status_str() const {
+	char str[] = {
+		haschildren() ? 'C' : 'c',
+		hasfreechild() ? 'C' : 'c',
+		hasblock() ? 'B' : 'b',
+		hasparent() ? 'P' : 'p',
+		isfreenode() ? 'F' : 'f',
+		'-',
+		test_flag(Block::RENDER_FLAG) ? 'R' : 'r',
+		test_flag(Block::GENERATION_FLAG) ? 'G' : 'g'
+	};
+	return str;
+}
+
 void NodePtr::set_block(Block* block) {
 	ASSERT(!haschildren());
 	if (node->block != nullptr) delete node->block;
@@ -265,7 +279,7 @@ NodeView NodeView::child(NodeIndex index) const {
 			node->children + index,
 			position + scale / BDIMS * ivec3(index),
 			scale / BDIMS,
-			(RefCounted<NodeView>*)(highparent)
+			highparent
 		);
 	}
 	return NodeView();
@@ -371,7 +385,8 @@ NodePtr(node), HitCube(transform_out_hparent(HitCube(lpos, nscale, quat(1,0,0,0)
 	
 }
 
-FreeNodeView::FreeNodeView(const NodeView& nodeview): NodePtr(nodeview), HitCube(nodeview.position, nodeview.scale, quat(1,0,0,0)), localpos(nodeview.position), highparent(nullptr) {
+FreeNodeView::FreeNodeView(const NodeView& nodeview): NodePtr(nodeview), HitCube(nodeview.position, nodeview.scale, quat(1,0,0,0)),
+localpos(nodeview.position), highparent(nullptr) {
 
 }
 
@@ -524,4 +539,4 @@ NodeView BlockContainer::get_global(ivec3 pos, int goal_scale) {
 	}
 	return NodeView();
 }
-	
+
