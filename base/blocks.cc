@@ -26,7 +26,7 @@ NodePtr NodePtr::parent() const {
 	if (hasparent()) {
 		return NodePtr(node->parent);
 	}
-	return NodeView();
+	return NodePtr();
 }
 
 NodePtr NodePtr::freechild() const {
@@ -106,7 +106,7 @@ void NodePtr::remove_freechild() {
 void NodePtr::add_freechild(vec3 offset, quat rotation) {
 	FreeNode* newfree = new FreeNode();
 	newfree->offset = offset;
-	newfree->rotation = rotation;
+	//newfree->rotation = rotation;
 	newfree->next = node->freechild;
 	node->freechild = newfree;
 	update_child(newfree);
@@ -381,20 +381,20 @@ HitCube transform_out_hparent(HitCube input, RefCounted<FreeNodeView>* hparent) 
 }
 
 FreeNodeView::FreeNodeView(NodePtr node, ivec3 lpos, int nscale, RefCounted<FreeNodeView>* hparent):
-NodePtr(node), HitCube(transform_out_hparent(HitCube(lpos, nscale, quat(1,0,0,0)), hparent)), localpos(lpos), highparent(hparent) {
+NodePtr(node), HitCube(transform_out_hparent(HitCube(lpos, nscale), hparent)), localpos(lpos), highparent(hparent) {
 	
 }
 
-FreeNodeView::FreeNodeView(const NodeView& nodeview): NodePtr(nodeview), HitCube(nodeview.position, nodeview.scale, quat(1,0,0,0)),
+FreeNodeView::FreeNodeView(const NodeView& nodeview): NodePtr(nodeview), HitCube(nodeview.position, nodeview.scale),
 localpos(nodeview.position), highparent(nullptr) {
 
 }
 
 void FreeNodeView::recalculate_position() {
 	if (highparent != nullptr) {
-		HitCube::operator=(highparent->transform_out(HitCube(localpos, scale, quat(1,0,0,0))));
+		HitCube::operator=(highparent->transform_out(HitCube(localpos, scale)));
 	} else {
-		HitCube::operator=(HitCube(localpos, scale, quat(1,0,0,0)));
+		HitCube::operator=(HitCube(localpos, scale));
 	}
 }
 
@@ -442,7 +442,7 @@ FreeNodeView FreeNodeView::freechild() const {
 	if (hasfreechild()) {
 		RefCounted<FreeNodeView>* hparent = new RefCounted<FreeNodeView>(*this);
 		hparent->position += node->freechild->offset;
-		hparent->rotation *= node->freechild->rotation;
+		//hparent->rotation *= node->freechild->rotation;
 		return FreeNodeView(
 			node->freechild,
 			ivec3(0,0,0),
@@ -457,7 +457,7 @@ FreeNodeView FreeNodeView::freesibling() const {
 	if (hasfreesibling()) {
 		RefCounted<FreeNodeView>* hparent = new RefCounted<FreeNodeView>(highparent->node, highparent->localpos, highparent->scale, highparent->highparent);
 		hparent->position += freenode()->next->offset;
-		hparent->rotation *= freenode()->next->rotation;
+		//hparent->rotation *= freenode()->next->rotation;
 		return FreeNodeView(
 			freenode()->next,
 			ivec3(0,0,0),

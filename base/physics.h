@@ -44,11 +44,11 @@ struct IHitCube {
 struct HitCube {
 	vec3 position;
 	int scale;
-	quat rotation;
+	//quat rotation;
 	
 	HitCube();
 	HitCube(const IHitCube& icube);
-	HitCube(vec3 pos, int nscale, quat rot);
+	HitCube(vec3 pos, int nscale);//, quat rot);
 	
 	vec3 midpoint() const;
 
@@ -75,12 +75,12 @@ struct HitCube {
 struct HitBox {
 	vec3 position;
 	vec3 dims;
-	quat rotation;
+	//quat rotation;
 
 	HitBox();
 	HitBox(const IHitCube& icube);
 	HitBox(const HitCube& cube);
-	HitBox(vec3 pos, vec3 dims, quat rot);
+	HitBox(vec3 pos, vec3 dims);//, quat rot);
 
 	vec3 midpoint() const;
 
@@ -158,36 +158,40 @@ inline HitCube::HitCube() {
 	
 }
 
-inline HitCube::HitCube(const IHitCube& icube): position(icube.position), scale(icube.scale), rotation(1,0,0,0) {
+inline HitCube::HitCube(const IHitCube& icube): position(icube.position), scale(icube.scale) {
 	
 }
 
-inline HitCube::HitCube(vec3 pos, int nscale, quat rot): position(pos), scale(nscale), rotation(rot) {
+inline HitCube::HitCube(vec3 pos, int nscale): position(pos), scale(nscale) {
 	
 }
 
 inline vec3 HitCube::transform_in(vec3 point) const {
-	return glm::inverse(rotation) * (point - position);
+	//return glm::inverse(rotation) * (point - position);
+	return point - position;
 }
 
 inline vec3 HitCube::transform_in_dir(vec3 point) const {
-	return glm::inverse(rotation) * point;
+	//return glm::inverse(rotation) * point;
+    return point;
 }
 
 inline vec3 HitCube::transform_out(vec3 point) const {
-	return rotation * point + position;
+	//return rotation * point + position;
+    return point + position;
 }
 
 inline vec3 HitCube::transform_out_dir(vec3 point) const {
-	return rotation * point;
+	//return rotation * point;
+    return point;
 }
 
 inline HitCube operator+(const HitCube& cube, ivec3 pos) {
-	return HitCube(cube.position + cube.transform_out_dir(pos * cube.scale), cube.scale, cube.rotation);
+	return HitCube(cube.position + cube.transform_out_dir(pos * cube.scale), cube.scale);
 }
 
 inline HitCube operator+(ivec3 pos, const HitCube& cube) {
-	return HitCube(cube.position + cube.transform_out_dir(pos * cube.scale), cube.scale, cube.rotation);
+	return HitCube(cube.position + cube.transform_out_dir(pos * cube.scale), cube.scale);
 }
 
 inline HitCube& HitCube::operator+=(ivec3 pos) {
@@ -209,32 +213,36 @@ inline HitBox::HitBox() {
 	
 }
 
-inline HitBox::HitBox(const IHitCube& ibox): position(ibox.position), dims(ibox.scale), rotation(1,0,0,0) {
+inline HitBox::HitBox(const IHitCube& ibox): position(ibox.position), dims(ibox.scale) {
 	
 }
 
-inline HitBox::HitBox(const HitCube& box): position(box.position), dims(box.scale), rotation(box.rotation) {
+inline HitBox::HitBox(const HitCube& box): position(box.position), dims(box.scale) {
 	
 }
 
-inline HitBox::HitBox(vec3 pos, vec3 dims, quat rot): position(pos), dims(dims), rotation(rot) {
+inline HitBox::HitBox(vec3 pos, vec3 dims): position(pos), dims(dims) {
 	
 }
 
 inline vec3 HitBox::transform_in(vec3 point) const {
-	return glm::inverse(rotation) * (point - position);
+	//return glm::inverse(rotation) * (point - position);
+	return point - position;
 }
 
 inline vec3 HitBox::transform_in_dir(vec3 point) const {
-	return glm::inverse(rotation) * point;
+	//return glm::inverse(rotation) * point;
+    return point;
 }
 
 inline vec3 HitBox::transform_out(vec3 point) const {
-	return rotation * point + position;
+	//return rotation * point + position;
+    return point + position;
 }
 
 inline vec3 HitBox::transform_out_dir(vec3 point) const {
-	return rotation * point;
+	//return rotation * point;
+    return point;
 }
 
 inline ostream& operator<<(ostream& out, const HitBox& cube) {

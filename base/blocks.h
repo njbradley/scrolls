@@ -103,6 +103,7 @@ struct FreeNode : Node {
 	FreeNode* next = nullptr;
 	quat rotation;
 	vec3 offset;
+    Entity* entity = nullptr;
 	
 	FreeNode();
 };
@@ -285,12 +286,12 @@ protected:
 
 // class that allows reading/modifying
 // of the octree
-// A nodeview points to a position on the block tree, while
+// A nodeview points to a node in the block tree, while
 // also keeping track of the current position and size of the
 // node pointed to.
 // Use this class when a NodePtr wouldn't do (you need position),
 // But you don't need to know the true global position of a block
-// 
+// (ie when involving FreeNodes)
 class NodeView : public NodePtr, public IHitCube {
 public:
 	
@@ -600,7 +601,7 @@ inline FreeNodeView::FreeNodeView() {
 }
 
 inline ostream& operator<<(ostream& out, const FreeNodeView& node) {
-	return out << "NodeView(" << node.status_str() << ' ' << node.position << ' ' << node.scale << ' ' << node.rotation << ")";
+	return out << "NodeView(" << node.status_str() << ' ' << node.position << ' ' << node.scale << ")";
 }
 
 // inline FreeNodeView::FreeNodeView(const NodeView& nodeview): NodeView(nodeview) {

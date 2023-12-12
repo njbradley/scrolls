@@ -139,6 +139,29 @@ using HitCubeIter = CollisionIter<NodePtrT,HitCube>;
 template <typename NodePtrT>
 using HitBoxIter = CollisionIter<NodePtrT,HitBox>;
 
+template <typename NodePtrT, typename HitBoxT>
+class CollisionBlockIter : public CollisionIter<NodePtrT,HitBoxT> {
+public:
+	using CollisionIter<NodePtrT,HitBoxT>::CollisionIter;
+protected:
+	using NodeIter<NodePtrT>::node;
+	virtual bool valid_node() const { return node.hasblock(); }
+};
+
+template <typename NodePtrT>
+using IHitCubeBlockIter = CollisionBlockIter<NodePtrT,IHitCube>;
+template <typename NodePtrT>
+using HitCubeBlockIter = CollisionBlockIter<NodePtrT,HitCube>;
+template <typename NodePtrT>
+using HitBoxBlockIter = CollisionBlockIter<NodePtrT,HitBox>;
+
+/*
+template <typename Iterator>
+class CollisionIterable {
+public:
+    CollisionIterable(
+    */
+
 
 
 

@@ -509,7 +509,7 @@ TerrainValue root_groundlevel(TerrainContext* ctx, Layers* layers, vec3 pos) {
 void root_layergen(TerrainContext* ctx, Layers* outlayers, vec3 pos) {
 	outlayers->temperature += perlin3d(ctx->seed, pos, 128, 2, 0) - pos.y * 0.01f;
 	outlayers->wetness += perlin3d(ctx->seed, pos, 128, 2, 2);
-	outlayers->elevation += perlin2d(ctx->seed, pos, 128, 2, 1);
+	outlayers->elevation += perlin2d(ctx->seed, pos, 128, 2, 1) - pos.y * 0.01f;
 
 	outlayers->ground_level += perlin2d(ctx->seed, pos, 64, 64, 1) + TerrainValue(pos.y, 1); //root_groundlevel(ctx, outlayers, pos);
 	//outlayers->stone_level += root_groundlevel(ctx, outlayers, pos+vec3(0,10,0)) - 10;
@@ -534,9 +534,9 @@ BiomeResult root_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int
 	};
 	
 	return generate_biome_shapes({
-		ShapeValue(layers->ground_level, &blocktypes::stone)
+		ShapeValue(layers->ground_level, &blocktypes::stone),
 		//ShapeValue(highfunc(layers), &blocktypes::stone, &mountain_layergen, &mountain_biome),
-		//ShapeValue(lowfunc(layers), &blocktypes::grass, &plains_layergen, &plains_biome),
+		ShapeValue(lowfunc(layers), &blocktypes::grass, &plains_layergen, &plains_biome)
 		//ShapeValue(layers->stone_level, &blocktypes::stone),
 		//ShapeValue(layers->ground_level, &blocktypes::dirt)
 	}, pos, scale);

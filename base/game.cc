@@ -394,7 +394,7 @@ void SingleTreeGame::setup_gameloop() {
 		for (FreeNodeView view : FreeNodeView(node).iter<NodeIter>()) {
 			//cout << view.position << ' ' << view.scale << endl;
 			if (view.isfreenode()) {
-				cout << "FREE "<< view.position << ' ' << view.scale << ' ' << view.rotation << endl;
+				cout << "FREE "<< view.position << ' ' << view.scale << endl;
 			}
 		}
 
@@ -419,7 +419,7 @@ void SingleTreeGame::setup_gameloop() {
 
 		cout << world.max_depth() << " max_depth" << endl;
 
-		HitBox box (ivec3(0,0,0), ivec3(1.1,1.1,1.1), quat(1,0,0,0));
+		HitBox box (ivec3(0,0,0), ivec3(1.1,1.1,1.1));
 
 		for (NodeView node : world.iter<NodeIter>()) {
 			if (box.collides(node)) cout << node << endl;
@@ -443,8 +443,8 @@ void SingleTreeGame::setup_gameloop() {
 			}
 		}
 
-		HitBox box1 (vec3(0,0,0), vec3(1,1,1), quat(1,0,0,0));
-		HitBox box2 (vec3(1,1,1), vec3(1,1,1), quat(1,0,0,0));
+		HitBox box1 (vec3(0,0,0), vec3(1,1,1));
+		HitBox box2 (vec3(1,1,1), vec3(1,1,1));
 
 		cout << box1 << ' ' << box2 << ' ' << box1.collides(box2) << endl;
 	});

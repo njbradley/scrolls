@@ -138,3 +138,29 @@ NodeIndex DirNodeIter<NodePtrT>::increment_func(NodeIndex nodepos) {
 template class DirNodeIter<NodePtr>;
 template class DirNodeIter<NodeView>;
 template class DirNodeIter<FreeNodeView>;
+
+/*
+template class IHitCubeIter<NodePtr>;
+template class IHitCubeIter<NodeView>;
+template class IHitCubeIter<FreeNodeView>;
+
+template class HitCubeIter<NodePtr>;
+template class HitCubeIter<NodeView>;
+template class HitCubeIter<FreeNodeView>;
+
+template class HitBoxIter<NodePtr>;
+template class HitBoxIter<NodeView>;
+template class HitBoxIter<FreeNodeView>;
+
+template class IHitCubeBlockIter<NodePtr>;
+template class IHitCubeBlockIter<NodeView>;
+template class IHitCubeBlockIter<FreeNodeView>;
+
+template class HitCubeBlockIter<NodePtr>;
+template class HitCubeBlockIter<NodeView>;
+template class HitCubeBlockIter<FreeNodeView>;
+
+template class HitBoxBlockIter<NodePtr>;
+template class HitBoxBlockIter<NodeView>;
+template class HitBoxBlockIter<FreeNodeView>;
+*/
