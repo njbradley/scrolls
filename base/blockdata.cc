@@ -14,6 +14,8 @@ BlockData::BlockData(BlockDataParams params) {
             texture_paths[i] = params.textures[i];
         }
     }
+    visible = params.visible;
+    transparent = params.transparent;
 	allblocks.push_back(this);
 }
 
@@ -39,6 +41,7 @@ void BlockData::init(GraphicsContext* graphics) {
 }
 
 namespace blocktypes {
+    BlockData air ({.id = 0});
 	BlockData dirt ({.id = 1, .texture = "dirt.bmp"});
 	BlockData grass ({.id = 2, .texture = "grass.bmp"});
 	BlockData stone ({.id = 3, .texture = "stone.bmp"});

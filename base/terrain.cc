@@ -534,8 +534,8 @@ BiomeResult root_biome(TerrainContext* ctx, const Layers* layers, ivec3 pos, int
 	};
 	
 	return generate_biome_shapes({
-		ShapeValue(layers->ground_level, &blocktypes::stone),
-		//ShapeValue(highfunc(layers), &blocktypes::stone, &mountain_layergen, &mountain_biome),
+		//ShapeValue(layers->ground_level, &blocktypes::stone),
+		ShapeValue(highfunc(layers), &blocktypes::stone, &mountain_layergen, &mountain_biome),
 		ShapeValue(lowfunc(layers), &blocktypes::grass, &plains_layergen, &plains_biome)
 		//ShapeValue(layers->stone_level, &blocktypes::stone),
 		//ShapeValue(layers->ground_level, &blocktypes::dirt)

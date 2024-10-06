@@ -6,6 +6,8 @@
 
 struct BlockDataParams {
 	int id;
+    bool visible = true;
+    bool transparent = false;
     string texture;
     string textures[6];
 };
@@ -13,6 +15,8 @@ struct BlockDataParams {
 class BlockData {
     public:
 	int id;
+    bool visible;
+    bool transparent;
     string texture_paths[6];
     int textures[6];
     
@@ -27,6 +31,7 @@ class BlockData {
 
 
 namespace blocktypes {
+    extern BlockData air;
 	extern BlockData dirt;
 	extern BlockData grass;
 	extern BlockData stone;
