@@ -136,17 +136,23 @@ struct TerrainContext {
 };
 
 struct Layers {
-	static constexpr int num_layers = 5;
-	TerrainValue ground_level;
-	TerrainValue stone_level;
-	TerrainValue wetness;
-	TerrainValue temperature;
-	TerrainValue elevation;
+	static constexpr int num_layers = 8;
+
+    TerrainValue temperature;
+    TerrainValue temperature_variance;
+    TerrainValue humidity;
+    TerrainValue humidity_variance;
+    TerrainValue ruggedness;
+
+    TerrainValue ground_level;
+    TerrainValue water_table;
+    TerrainValue stone_level;
 
 	TerrainValue* layers() {
 		return (TerrainValue*)this;
 	}
 };
+
 
 struct BiomeResult {
 	LayerFunc nextlayergen;
